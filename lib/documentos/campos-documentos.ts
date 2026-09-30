@@ -838,6 +838,7 @@ export function recorrerCampos(
 /** Lista únicamente campos existentes cuya regla está confirmada y activa. */
 export function camposFaltantes(documento: any, tipo: string) {
   const faltantes: {
+    ejemplo: string;
     ruta: string;
     codigo: string;
     nombre: string;
@@ -860,6 +861,7 @@ export function camposFaltantes(documento: any, tipo: string) {
         codigo,
         nombre: info.nombre,
         motivo: info.motivo,
+        ejemplo: info.ejemplo,
       });
   });
   return faltantes;

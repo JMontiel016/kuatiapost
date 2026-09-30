@@ -55,13 +55,7 @@ export default function ConsultaLlama({
               Incluí el código de error o el nombre del campo para encontrar
               referencias precisas.
             </p>
-            <div className="suggestions">
-              {["¿Cómo completo el punto de expedición (dPunExp)?"].map((s) => (
-                <button key={s} onClick={() => setQuestion(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
+
           </div>
           {error && <div className="aviso-asistente" role="alert"><strong>No se pudo completar la consulta</strong><p>{error}</p></div>}
           {aiBusy && <p role="status">El asistente está preparando la explicación. En equipos sin GPU puede tardar unos minutos.</p>}
@@ -107,7 +101,7 @@ export default function ConsultaLlama({
             sources.map((s: any, i: number) => (
               <div className="source-row" key={i}>
                 <span>[{s.id}]</span>
-                <strong>{String(s.name).replace(/SIFEN/gi, "").trim()}</strong>
+                <strong>Referencia interna</strong>
                 <small>Página {s.page}</small>
               </div>
             ))
@@ -120,7 +114,7 @@ export default function ConsultaLlama({
           <div className="source-count">
             Referencias internas disponibles
             <br />
-            El asistente explica sin copiar el manual
+            El asistente explica la información consultada
           </div>
         </section>
       </div>

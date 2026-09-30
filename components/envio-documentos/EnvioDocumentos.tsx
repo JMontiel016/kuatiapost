@@ -453,6 +453,8 @@ export default function EnvioDocumentos() {
       if (aiBusy) return;
       setAiError("");
       setAiBusy(true);
+      // Cada consulta sustituye la explicación anterior, sin acumular historial.
+      setAnswer("");
       setSources([]);
       try {
         const r = await fetch("/api/asistente", {
