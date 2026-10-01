@@ -1,9 +1,5 @@
-Reemplazar los archivos incluidos sobre el proyecto actual, sin borrar el resto. Incluye capturas, eliminación del asistente del menú y explicación de controles.
+Reemplazar public/manual/KuatiaPost-Manual-de-Uso.pdf.
 
-Verificar: npm run typecheck y npm run dev.
-
-Subir:
-git add app/globals.css components/manual components/envio-documentos/EnvioDocumentos.tsx public/manual documentacion/MANUAL_DE_USO.md documentacion/REVISION_BOTONES_MANUAL.md
-git commit -m "Documentar botones y controles de KuatiaPost"
+git add public/manual/KuatiaPost-Manual-de-Uso.pdf
+git commit -m "Ajustar título del manual de uso"
 git push origin main
-git status
