@@ -2003,3 +2003,13 @@ html[data-tema="oscuro"] .manual-indice button.actual, html[data-tema="oscuro"] 
 html[data-tema="oscuro"] .manual-etiqueta { color:#ffb27d; }
 @media(max-width:1000px) { .manual-distribucion { grid-template-columns:1fr; gap:20px; } .manual-indice { position:static; grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .manual-cabecera { align-items:flex-start; flex-direction:column; } .manual-indice { grid-template-columns:1fr; } .manual-marca > span { width:18px; height:18px; font-size:10px; top:1px; left:1px; } }
+
+/* La revisión permanece debajo de las acciones y conserva el significado del color. */
+.revision-success { background:#eaf9ef; color:#17603a; border:1px solid #8ed7a7; }
+.revision-warning { background:#fff7df; color:#815b0b; border:1px solid #e9c76b; }
+.campos-solicitud > .campo-documento { display:block; margin-bottom:16px; }
+.campos-solicitud > .campo-documento input, .campos-solicitud > .campo-documento select { width:100%; }
+.campos-solicitud .rejilla-campos > .rejilla-campos { grid-column:1/-1; }
+.campos-solicitud .rejilla-campos > .grupo-documento { grid-column:1/-1; }
+html[data-tema="oscuro"] .revision-success { background:#1b3527; color:#b5edc7; border-color:#508465; }
+html[data-tema="oscuro"] .revision-warning { background:#392e1d; color:#ffdc97; border-color:#9f803d; }

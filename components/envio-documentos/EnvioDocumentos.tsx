@@ -41,6 +41,8 @@ import {
   camposFaltantes,
   vaciarCamposOpcionales,
 } from "../../lib/documentos/campos-documentos";
+import { ordenarJSON } from "../../lib/integracion/ordenar-json";
+import CamposSolicitud from "../documentos/CamposSolicitud";
 import CamposDocumento, {
   type CampoEnfocado,
 } from "../documentos/CamposDocumento";
@@ -134,6 +136,7 @@ export default function EnvioDocumentos() {
     [replace, setReplace] = useState("");
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
+  const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(false);
   const [verRespuesta, cambiarVerRespuesta] = useState(true);
   function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
@@ -143,6 +146,7 @@ export default function EnvioDocumentos() {
     const reloj = window.setTimeout(() => cambiarNotice(""), 6500);
     return () => window.clearTimeout(reloj);
   }, [notice]);
+  useEffect(() => { cambiarRevisionRealizada(false); setErrors([]); }, [body]);
   useEffect(() => { document.documentElement.dataset.tema = oscuro ? "oscuro" : "claro"; }, [oscuro]);
   useEffect(() => {
     // Evita restaurar credenciales mediante la caché de navegación al volver.
@@ -748,14 +752,14 @@ export default function EnvioDocumentos() {
                   )}
                   {editorTab === "form" && (
                     <div className="fields-scroll">
-                      {parsed ? (
+                      {parsed ? (mode === "custom" ? <CamposSolicitud datos={parsed} alCambiar={v=>setBody(pretty(v))}/> : (
                         <CamposDocumento
                           documento={parsed}
                           tipo={type}
                           alCambiar={(v: any) => setBody(pretty(v))}
                           alEnfocar={setCampoEnfocado}
                         />
-                      ) : (
+                      )) : (
                         <p>
                           Corregí la sintaxis del JSON para editar los campos.
                         </p>
@@ -798,22 +802,31 @@ export default function EnvioDocumentos() {
                       {body.length.toLocaleString("es-PY")} caracteres · UTF-8
                     </span>
                   </div>
-                  {errors.length > 0 && (
-                    <details className="validation" open>
-                      <summary>Campos por revisar ({errors.length}) · pulsá para desplegar o minimizar</summary>
-                      <div className="errores-desplegables">{errors.map((e, i) => <p key={i}>{e}</p>)}</div>
-                    </details>
-                  )}
                   <div className="bottom-tools">
+                    {/* Formatea cualquier JSON válido sin convertir ni ordenar sus datos. */}
+                    <button onClick={() => {
+                      try { setBody(ordenarJSON(body)); }
+                      catch { cambiarRevisionRealizada(true); setErrors(["No se pudo ordenar: corregí la sintaxis del JSON, las comas, las comillas o los corchetes."]); }
+                    }}><Braces size={16}/>Ordenar JSON</button>
                     <button
-                      onClick={() =>
-                        attempt(() => {
+                      onClick={() => {
+                        cambiarRevisionRealizada(true);
+                        try {
                           const p = parseObject(body);
-                          const problemas = mode === "emit" ? validateDocument(p, type) : [];
+                          const tipoRevision = mode === "emit" ? type : String(p.iTiDE || "");
+                          // Verificar la estructura antes de recorrer filas evita errores
+                          // técnicos si un grupo fue escrito como objeto o como texto.
+                          const problemas: string[] = [];
+                          if (String(p.tipOpe) === "1" && !["1","4","5","6","7"].includes(tipoRevision)) problemas.push("(iTiDE) Para emitir informá un tipo reconocido: 1, 4, 5, 6 o 7.");
+                          for (const grupo of ["Detalles", "Pagos", "Subtotales", "DocumentosAsociados"]) {
+                            if (grupo in p && !Array.isArray(p[grupo])) problemas.push(`(${grupo}) Debe ser una lista entre corchetes [ ].`);
+                            else if (Array.isArray(p[grupo]) && p[grupo].some((fila:any)=>!fila || typeof fila !== "object" || Array.isArray(fila))) problemas.push(`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`);
+                          }
+                          if (!problemas.length && ["1","4","5","6","7"].includes(tipoRevision)) problemas.push(...validateDocument(p,tipoRevision));
+                          if (p.gCamItem && !p.Detalles) problemas.push("(gCamItem) La plantilla de envío usa Detalles para la lista de productos. Confirmá la clave que espera tu integración.");
                           setErrors(problemas);
-                          setNotice(problemas.length ? `Revisá ${problemas.length} campos señalados.` : "Revisión completada sin problemas detectados en la plantilla.", problemas.length ? "warning" : "success");
-                        })
-                      }
+                        } catch (error:any) { setErrors([error.message || "El JSON no es válido."]); }
+                      }}
                     >
                       <ShieldCheck size={16} />
                       Revisar
@@ -861,6 +874,10 @@ export default function EnvioDocumentos() {
                       Excel
                     </button>
                   </div>
+                  {(revisionRealizada || errors.length > 0) && <details className={`validation ${errors.length ? "revision-warning" : "revision-success"}`} open role="status">
+                    <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin problemas detectados"}</summary>
+                    <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
+                  </details>}
                 </section>
                 <aside className="right-column">
                   <section className="panel import-panel">
