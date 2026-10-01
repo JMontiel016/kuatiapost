@@ -1970,3 +1970,36 @@ html[data-tema="oscuro"] .aviso-error { background:#392125; color:#ffb9bf; borde
 html[data-tema="oscuro"] .aviso-warning { background:#392e1d; color:#ffdc97; border-color:#9f803d; }
 html[data-tema="oscuro"] .aviso-info { background:#213149; color:#c1dcff; border-color:#577fac; }
 html[data-tema="oscuro"] .aviso-success { background:#1b3527; color:#b5edc7; border-color:#508465; }
+
+/* Guía organizada: índice lateral, vista numerada y pasos independientes. */
+.manual-cabecera { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid #dce3ec; }
+.manual-cabecera h1 { margin:8px 0; }
+.manual-cabecera p { margin:0; }
+.manual-etiqueta { font-size:11px; letter-spacing:1.3px; color:#b95300; font-weight:700; }
+.manual-distribucion { display:grid; grid-template-columns:220px minmax(0,1fr); gap:30px; align-items:start; }
+.manual-indice { display:grid; gap:8px; position:sticky; top:20px; }
+.manual-indice button { display:flex; align-items:center; justify-content:flex-start; padding:12px; text-align:left; gap:12px; border:1px solid #dce3ec; border-radius:10px; color:#44556e; background:#f8fafc; }
+.manual-indice button strong { font-size:12px; line-height:1.5; color:inherit; }
+.manual-indice button > span, .manual-leyenda > span, .manual-instrucciones li > span { display:grid; place-items:center; flex-shrink:0; width:26px; height:26px; border-radius:50%; font-size:12px; font-weight:700; background:#e9eef5; color:#334861; }
+.manual-indice button.actual { background:#fff1e7; border-color:#ea8b51; color:#96400b; }
+.manual-indice button.actual > span { background:#ff7900; color:white; }
+.manual-tarea { min-width:0; }
+.manual-titulo > span { font-size:11px; color:#7c899b; font-weight:700; letter-spacing:1px; }
+.manual-titulo h2 { margin:10px 0; }
+.manual-titulo p { font-size:13px; line-height:1.6; }
+.manual-vista { position:relative; margin:20px 0 12px; border:1px solid #cad5e3; border-radius:10px; overflow:hidden; }
+.manual-vista > img { display:block; width:100%; }
+.manual-marca { position:absolute; display:block; padding:0; border:2px solid #ff7900; border-radius:6px; background:transparent; }
+.manual-marca > span { position:absolute; top:4px; left:4px; width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:#ff7900; color:white; font-size:12px; font-weight:700; }
+.manual-marca.seleccionada { box-shadow:inset 0 0 0 2px #fff; background:#ff790009; }
+.manual-marca:focus-visible { outline:3px solid #ff7900; outline-offset:3px; }
+.manual-leyenda { display:flex; align-items:center; gap:10px; padding:14px; background:#fff1e7; border-radius:8px; margin-bottom:26px; font-size:13px; }
+.manual-leyenda > span { background:#ff7900; color:white; }
+.manual-instrucciones { list-style:none; padding:0; display:grid; gap:12px; }
+.manual-instrucciones li { display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid #e0e6ef; border-radius:10px; }
+.manual-instrucciones li p { margin:0; font-size:13px; line-height:1.75; }
+html[data-tema="oscuro"] .manual-indice button, html[data-tema="oscuro"] .manual-instrucciones li { background:#20252d; border-color:#454d5b; color:#dce4ef; }
+html[data-tema="oscuro"] .manual-indice button.actual, html[data-tema="oscuro"] .manual-leyenda { background:#3b2c22; border-color:#ab672d; color:#ffbf95; }
+html[data-tema="oscuro"] .manual-etiqueta { color:#ffb27d; }
+@media(max-width:1000px) { .manual-distribucion { grid-template-columns:1fr; gap:20px; } .manual-indice { position:static; grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .manual-cabecera { align-items:flex-start; flex-direction:column; } .manual-indice { grid-template-columns:1fr; } .manual-marca > span { width:18px; height:18px; font-size:10px; top:1px; left:1px; } }
