@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KuatiaPost · Documentos e integración",
+  title: "KuatiaPost · Datos e integración",
   description:
     "Mesa de trabajo para preparar JSON, conectar tu integración y consultar documentación KuatiaPost con asistente.",
   other: {

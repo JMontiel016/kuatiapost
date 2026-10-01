@@ -1,4 +1,3 @@
-Copiá los cuatro archivos en el proyecto respetando las carpetas. Este paquete incluye el ajuste anterior de una consulta por vez.
-La nube muestra nombre del campo y ejemplo de formato. No muestra el manual ni lista de pendientes. El asistente no muestra preguntas de ejemplo.
-Después: npm run build, git add components lib, git commit -m "Simplificar ayuda del asistente", git push origin main.
-No modifica las variables de Vercel; LLAMA_URL sigue siendo necesaria.
+Aplicar sobre el proyecto actualizado de KuatiaPost. Copiar components, lib y documentacion sobre la raíz, conservando las rutas. No reemplaza configuración ni credenciales.
+Ejecutar npm run build -- --webpack y npm run dev.
+Esta actualización recupera nombres de campos del manual, el catálogo B2B/B2C/B2G/B2F y la identificación opcional B2F de NT 023. Mantiene las descripciones de Otro y los demás ajustes anteriores.

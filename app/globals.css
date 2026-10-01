@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 * {
   box-sizing: border-box;
 }
@@ -173,7 +172,7 @@ textarea {
   margin-bottom: 0;
 }
 .settings-link {
-  margin-top: auto;
+  margin-top: 6px;
 }
 .sidebar-footer {
   display: flex;
@@ -1871,3 +1870,103 @@ td {
 
 /* JSON de autenticación editable y legible, con espacio para ambas propiedades. */
 .auth-json-editable { width: 100%; min-height: 150px; padding: 16px; font: 14px/1.7 monospace; border: 1px solid #cad5e5; border-radius: 8px; resize: vertical; }
+
+/* Controles de credenciales y marca propia de KuatiaPost. */
+.auth-json-controles { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 8px; }
+.auth-json-controles > span { font-size: 13px; font-weight: 600; }
+.logo-publico { color: #ff7900; display: inline-flex; align-items: center; }
+.asistente-proximamente { padding: 28px; }
+.asistente-proximamente p { margin-bottom: 0; }
+
+/* Avisos con significado explícito; la revisión detallada permanece desplegable. */
+.aviso-success { background:#eaf9ef; color:#17603a; border-color:#8ed7a7; }
+.aviso-error { background:#fff0f0; color:#a12d32; border-color:#efa3a7; }
+.aviso-info { background:#eef5ff; color:#284c7b; border-color:#9dbbe0; }
+.aviso-warning { background:#fff7df; color:#815b0b; border-color:#e9c76b; }
+.validation summary { cursor:pointer; font-weight:700; }
+.errores-desplegables { max-height:380px; overflow:auto; padding-right:12px; }
+.response-code { max-height:520px; overflow:auto; resize:vertical; min-height:120px; }
+/* Tema oscuro: preferencias solo en memoria; no se guardan datos en el equipo. */
+html[data-tema="oscuro"] { color-scheme:dark; }
+html[data-tema="oscuro"] body, html[data-tema="oscuro"] .app-shell { background:#121418; color:#e6e9ef; }
+html[data-tema="oscuro"] .panel, html[data-tema="oscuro"] .topbar, html[data-tema="oscuro"] .main-content, html[data-tema="oscuro"] .settings-panel { background:#1b1e24; color:#e6e9ef; border-color:#383b43; }
+html[data-tema="oscuro"] input, html[data-tema="oscuro"] textarea, html[data-tema="oscuro"] select, html[data-tema="oscuro"] .outline, html[data-tema="oscuro"] .bottom-tools, html[data-tema="oscuro"] .editor-top, html[data-tema="oscuro"] .editor-status { background:#15181d; color:#ecedf1; border-color:#4b4e56; }
+html[data-tema="oscuro"] h1, html[data-tema="oscuro"] h2, html[data-tema="oscuro"] h3, html[data-tema="oscuro"] strong, html[data-tema="oscuro"] label { color:#f0f1f5; }
+html[data-tema="oscuro"] p, html[data-tema="oscuro"] .tiny, html[data-tema="oscuro"] small, html[data-tema="oscuro"] .codigo-campo { color:#b8c0d0; }
+html[data-tema="oscuro"] .validation, html[data-tema="oscuro"] .campo-faltante input, html[data-tema="oscuro"] .campo-faltante select { background:#332715; color:#ffd08b; }
+html[data-tema="oscuro"] .modal, html[data-tema="oscuro"] .modal-content { background:#1b1e24; color:#e6e9ef; }
+/* Manual visual: zonas interactivas sobre capturas vacías, sin datos personales. */
+.manual-uso { padding:28px; }
+.manual-pestanas { display:flex; gap:8px; flex-wrap:wrap; margin:20px 0; }
+.manual-imagen { position:relative; margin:20px 0; border:1px solid #b7c5d9; border-radius:12px; overflow:hidden; }
+.manual-imagen > img { width:100%; display:block; }
+.manual-zona { position:absolute; background:transparent; border:2px solid #ff7800; border-radius:8px; align-items:flex-start; justify-content:flex-start; padding:4px; }
+.manual-zona > span { background:#17263c; color:#fff; border-radius:5px; padding:5px 8px; font-size:12px; text-align:left; }
+.manual-zona.seleccionada { box-shadow:0 0 0 3px #ff78004d; background:#ff78000d; }
+.manual-uso li { padding:8px 0; line-height:1.65; }
+.manual-zona-descripcion { font-weight:700; color:#b95300; }
+.manual-uso details { padding:18px; border:1px solid #bac9df; border-radius:10px; margin-top:24px; }
+@media(max-width:650px) { .manual-uso { padding:14px; } .manual-zona > span { font-size:9px; padding:2px; } }
+
+/* Tema compacto y ubicación del bloque informativo en el espacio lateral. */
+.theme-toggle { margin-left:auto; width:36px; height:36px; padding:0; border-radius:50%; color:#52647a; border:1px solid #d2dae5; background:#fff; transition:background .18s,color .18s,transform .18s; }
+.theme-toggle:hover { background:#fff0e7; color:#bd4d15; transform:rotate(12deg); }
+.theme-toggle:focus-visible { outline:3px solid #ff7900; outline-offset:3px; }
+.sidebar-note { margin-top:clamp(60px, 14vh, 140px); }
+/* Cada superficie clara tiene su equivalente oscuro, incluidos los formularios. */
+html[data-tema="oscuro"] .theme-toggle { background:#252a32; color:#ffc275; border-color:#596170; }
+html[data-tema="oscuro"] .tag { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .tag.light { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .outline:hover { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .document-switch button.selected { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .selected .doc-code { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .panel { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .square-icon { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .endpoint input { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .endpoint > select { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .editor-toolbar { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .tabs span { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .search-bar input { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .line-numbers { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .editor-footer { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .guidance { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .assistant-symbol { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .response-code { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .success { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .warning { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .connection-info { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .item-form { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .info-banner { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .library-search { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] th { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .instruccion-campos { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .estado-campo.obligatorio { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .estado-campo.condicional { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .estado-campo.opcional { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .estado-campo.integracion { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .campo-documento input , html[data-tema="oscuro"] .campo-documento select { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .campo-documento input:disabled { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .campo-faltante input , html[data-tema="oscuro"] .campo-faltante select { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .fila-documento { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .ejemplo-burbuja { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .fila-documento { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .instruccion-campos { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .consulta-campos .field select { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .visor-kude { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .campo-documento input[aria-invalid="true"] , html[data-tema="oscuro"] .campo-documento select[aria-invalid="true"] { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .aviso-asistente { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .aviso-error { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .aviso-info { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .aviso-warning { background:#20252d; color:#e3e8ef; border-color:#454d5b; }
+html[data-tema="oscuro"] .tabs button.on { color:#ffb27d; }
+html[data-tema="oscuro"] h4, html[data-tema="oscuro"] .instruccion-campos, html[data-tema="oscuro"] .breadcrumb strong { color:#e7edf5; }
+html[data-tema="oscuro"] .instruccion-campos p, html[data-tema="oscuro"] .instruccion-campos label { color:#cbd4e2; }
+html[data-tema="oscuro"] .manual-zona-descripcion { color:#ffb27d; }
+html[data-tema="oscuro"] input::placeholder, html[data-tema="oscuro"] textarea::placeholder { color:#a0adbe; opacity:1; }
+html[data-tema="oscuro"] button:disabled { opacity:.65; }
+html[data-tema="oscuro"] .document-switch, html[data-tema="oscuro"] .code-editor, html[data-tema="oscuro"] .search-bar { background:#20252d; color:#dbe3ee; border-color:#454d5b; }
+html[data-tema="oscuro"] .document-switch button.selected { background:#3b2c22; color:#ffc098; }
+html[data-tema="oscuro"] .aviso-error { background:#392125; color:#ffb9bf; border-color:#a65f69; }
+html[data-tema="oscuro"] .aviso-warning { background:#392e1d; color:#ffdc97; border-color:#9f803d; }
+html[data-tema="oscuro"] .aviso-info { background:#213149; color:#c1dcff; border-color:#577fac; }
+html[data-tema="oscuro"] .aviso-success { background:#1b3527; color:#b5edc7; border-color:#508465; }
