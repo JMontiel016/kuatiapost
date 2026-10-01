@@ -41,7 +41,7 @@ import {
   camposFaltantes,
   vaciarCamposOpcionales,
 } from "../../lib/documentos/campos-documentos";
-import { ordenarJSON } from "../../lib/integracion/ordenar-json";
+import { prepararJSONPegado } from "../../lib/integracion/ordenar-json";
 import CamposSolicitud from "../documentos/CamposSolicitud";
 import CamposDocumento, {
   type CampoEnfocado,
@@ -136,6 +136,7 @@ export default function EnvioDocumentos() {
     [replace, setReplace] = useState("");
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
+  const [ordenado, cambiarOrdenado] = useState<{ mensajes: string[]; registro: string } | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(false);
   const [verRespuesta, cambiarVerRespuesta] = useState(true);
@@ -805,8 +806,8 @@ export default function EnvioDocumentos() {
                   <div className="bottom-tools">
                     {/* Formatea cualquier JSON válido sin convertir ni ordenar sus datos. */}
                     <button onClick={() => {
-                      try { setBody(ordenarJSON(body)); }
-                      catch { cambiarRevisionRealizada(true); setErrors(["No se pudo ordenar: corregí la sintaxis del JSON, las comas, las comillas o los corchetes."]); }
+                      try { const resultado = prepararJSONPegado(body); setBody(resultado.json); cambiarOrdenado(resultado); }
+                      catch (error) { cambiarOrdenado(null); cambiarRevisionRealizada(true); setErrors([`No se pudo ordenar: ${error instanceof Error ? error.message : "revisá la sintaxis del JSON"}`]); }
                     }}><Braces size={16}/>Ordenar JSON</button>
                     <button
                       onClick={() => {
@@ -874,6 +875,12 @@ export default function EnvioDocumentos() {
                       Excel
                     </button>
                   </div>
+                  {ordenado && <details className="validation revision-warning" open role="status">
+                    <summary>Resultado de la última ordenación</summary>
+                    <button onClick={() => cambiarOrdenado(null)}>Cerrar revisión</button>
+                    <div className="errores-desplegables">{ordenado.mensajes.length ? ordenado.mensajes.map((mensaje, i) => <p key={i}>{mensaje}</p>) : <p>JSON formateado. No se detectaron avisos con las reglas disponibles.</p>}</div>
+                    {ordenado.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{ordenado.registro}</pre></details>}
+                  </details>}
                   {(revisionRealizada || errors.length > 0) && <details className={`validation ${errors.length ? "revision-warning" : "revision-success"}`} open role="status">
                     <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin problemas detectados"}</summary>
                     <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
