@@ -1,3 +1,9 @@
-Aplicar sobre el proyecto actualizado de KuatiaPost. Copiar components, lib y documentacion sobre la raíz, conservando las rutas. No reemplaza configuración ni credenciales.
-Ejecutar npm run build -- --webpack y npm run dev.
-Esta actualización recupera nombres de campos del manual, el catálogo B2B/B2C/B2G/B2F y la identificación opcional B2F de NT 023. Mantiene las descripciones de Otro y los demás ajustes anteriores.
+Reemplazar los archivos incluidos sobre el proyecto actual, sin borrar el resto. Incluye capturas, eliminación del asistente del menú y explicación de controles.
+
+Verificar: npm run typecheck y npm run dev.
+
+Subir:
+git add app/globals.css components/manual components/envio-documentos/EnvioDocumentos.tsx public/manual documentacion/MANUAL_DE_USO.md documentacion/REVISION_BOTONES_MANUAL.md
+git commit -m "Documentar botones y controles de KuatiaPost"
+git push origin main
+git status
