@@ -33,9 +33,9 @@ type Propiedades = {
 
 const nombresGrupos: Record<string, string> = {
   Detalles: "Productos y servicios",
-  Subtotales: "Totales del documento",
+  Subtotales: "Totales del registro",
   Pagos: "Pagos de la venta",
-  DocumentosAsociados: "Documento que origina la nota",
+  DocumentosAsociados: "Referencia de origen",
   Transporte: "Transportista y conductor",
   Salida: "Lugar de salida",
   Entrega: "Lugar de entrega",
@@ -67,6 +67,7 @@ export default function CamposDocumento({
       );
   }
   const [verOpcionales, cambiarVerOpcionales] = useState(false);
+  const [ayuda, cambiarAyuda] = useState<string | null>(null);
 
   // La limpieza ocurre al editar, antes de devolver la plantilla al padre.
   const guardar = (nuevo: any) =>
@@ -99,6 +100,11 @@ export default function CamposDocumento({
     if (grupo ? !(codigo in (base[grupo]?.[0] || {})) : !(codigo in base)) return null;
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
     if (info.estado === "opcional" && estaVacio(valor) && !verOpcionales) return null;
+    // Los datos que no corresponden se retiran del formulario, aunque hayan sido
+    // escritos antes de cambiar la selección. El JSON libre conserva su control.
+    const inaplicable = info.estado === "opcional" && info.motivo.startsWith("No corresponde:");
+    if (inaplicable) return null;
+    if (grupo === "Pagos" && ["dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"].includes(codigo) && !["3","4"].includes(String(fila.iTiPago))) return null;
     const bloqueado = false;
     const formato = formatoCampo(codigo);
     const fueraDelCatalogo =
@@ -109,7 +115,8 @@ export default function CamposDocumento({
       ? "Elegí una opción válida del selector."
       : errorFormato(codigo, valor);
     const falta = info.estado === "obligatorio" && estaVacio(valor);
-    const enfocar = () =>
+    const enfocar = () => {
+      cambiarAyuda(ayuda === ruta ? null : ruta);
       alEnfocar({
         codigo,
         nombre: info.nombre,
@@ -117,6 +124,7 @@ export default function CamposDocumento({
         referencia: info.referencia,
         ejemplo: info.ejemplo,
       });
+    };
 
     // Cambia únicamente la ruta seleccionada, preservando las otras filas.
     const actualizar = (texto: string) => {
@@ -125,6 +133,25 @@ export default function CamposDocumento({
       let padre = nuevo;
       for (const parte of partes.slice(0, -1)) padre = padre[parte];
       padre[partes.at(-1)!] = texto;
+      // Cambiar un selector limpia exclusivamente sus dependencias incompatibles.
+      if (codigo === "iNatRec") {
+        for (const k of texto === "1" ? ["iTipIDRec","dDTipIDRec","dNumIDRec"] : ["iTiContRec","dRucRec","dDVRec"]) delete nuevo[k];
+      }
+      if (codigo === "iIndPres" && texto !== "9") delete nuevo.dDesIndPres;
+      if (codigo === "iTipIDRec" && texto !== "9") delete nuevo.dDTipIDRec;
+      // La condición de crédito conserva solo el plazo o las cuotas elegidas.
+      if (codigo === "iCondOpe" && texto === "1") {
+        for (const k of ["iCondCred", "dPlazoCre", "dCuotas", "dMonEnt"]) delete nuevo[k];
+      }
+      if (codigo === "iCondCred" && texto === "1") delete nuevo.dCuotas;
+      if (codigo === "iCondCred" && texto === "2") delete nuevo.dPlazoCre;
+      if (codigo === "iDenTarj" && texto !== "99") delete padre.dDesDenTarj;
+      if (codigo === "iTiPago") {
+        if (texto !== "2") for (const k of ["dNumCheq","dBcoEmi"]) delete padre[k];
+        if (texto !== "99") delete padre.dDesTiPag;
+        if (!["3","4"].includes(texto)) for (const k of ["iDenTarj","dDesDenTarj","iForProPa","dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"]) delete padre[k];
+      }
+
       guardar(nuevo);
     };
 
@@ -151,6 +178,7 @@ export default function CamposDocumento({
             <HelpCircle size={16} />
           </button>
         </div>
+        {ayuda === ruta && <p className="ayuda-campo" role="status">{info.motivo} Ejemplo de formato: {info.ejemplo}.</p>}
         {info.opciones && !bloqueado ? (
           <select
             id={ruta}
@@ -297,7 +325,7 @@ export default function CamposDocumento({
       </div>
       {[
         [
-          "Datos del documento",
+          "Datos generales",
           [
             "tipOpe",
             "iTiDE",
@@ -336,7 +364,7 @@ export default function CamposDocumento({
           ],
         ],
         [
-          "Datos específicos del documento",
+          "Datos específicos",
           Object.keys(documento).filter(
             (k) =>
               ![

@@ -29,7 +29,7 @@ export default function BurbujaAyuda({
   const actual = campo || pendiente;
   const pregunta = actual
     ? `Explicá (${actual.codigo}) ${actual.nombre}: cuándo es obligatorio y cómo completarlo. ${actual.motivo}`
-    : "Explicá cómo revisar el documento antes de enviarlo.";
+    : "Explicá cómo revisar el registro antes de enviarlo.";
 
   return (
     <aside

@@ -5,7 +5,18 @@ export const pretty = (v: any) => JSON.stringify(v, null, 2);
 
 /** Valida la sintaxis y exige un objeto como raíz de la solicitud. */
 export function parseObject(text: string) {
-  const v = JSON.parse(text);
+  let v: any;
+  try { v = JSON.parse(text); }
+  catch { throw Error("JSON inválido: revisá comillas dobles, comas y el cierre de llaves o corchetes. Conservamos el texto para que puedas corregirlo."); }
+  // Evita claves especiales que podrían modificar prototipos al importar datos.
+  const revisar = (objeto: any) => {
+    if (!objeto || typeof objeto !== "object") return;
+    for (const clave of Object.keys(objeto)) {
+      if (["__proto__", "constructor", "prototype"].includes(clave)) throw Error(`La clave ${clave} está reservada. Usá otro nombre.`);
+      revisar(objeto[clave]);
+    }
+  };
+  revisar(v);
   if (!v || Array.isArray(v) || typeof v !== "object")
     throw Error("La solicitud debe ser un objeto JSON.");
   return v;
@@ -19,7 +30,8 @@ export function pointer(value: any, path: string) {
 
 /** Acepta HTTPS y rechaza credenciales incluidas en la URL. */
 export function safeUrl(raw: string) {
-  const u = new URL(raw);
+  let u: URL;
+  try { u = new URL(raw); } catch { throw Error("La URL no está completa. Ingresá una dirección que empiece por https:// y tenga dominio y ruta."); }
   if (u.protocol !== "https:" || u.username || u.password)
     throw Error("Usá una URL HTTPS sin credenciales en la dirección.");
   return u.toString();

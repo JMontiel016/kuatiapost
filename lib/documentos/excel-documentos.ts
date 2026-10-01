@@ -5,18 +5,23 @@ import { parseObject, pretty } from "../integracion/solicitudes-integracion";
 export async function exportExcel(doc: any, response?: any) {
   const { default: ExcelJS } = await import("exceljs");
   const w = new ExcelJS.Workbook();
+  // Copia exacta del JSON libre: recupera tipos y objetos complejos al importar.
+  const respaldo = w.addWorksheet("KuatiaPost JSON");
+  respaldo.addRow(["JSON original (partes en orden)"]);
+  const original = pretty(doc);
+  for (let i = 0; i < original.length; i += 30000) respaldo.addRow([original.slice(i, i + 30000)]);
   const header = w.addWorksheet("Cabecera");
   header.addRow(["Campo", "Valor"]);
   for (const [k, v] of Object.entries(doc))
     if (!Array.isArray(v) && typeof v !== "object")
       header.addRow([k, String(v ?? "")]);
   for (const [k, v] of Object.entries(doc)) {
-    if (!Array.isArray(v)) continue;
+    if (!Array.isArray(v) || v.some(row => !row || typeof row !== "object" || Array.isArray(row))) continue;
     const sh = w.addWorksheet(k.slice(0, 31));
     const keys = [...new Set(v.flatMap((row) => Object.keys(row)))];
     if (keys.length) {
       sh.addRow(keys);
-      for (const row of v) sh.addRow(keys.map((key) => String(row[key] ?? "")));
+      for (const row of v) sh.addRow(keys.map((key) => typeof row[key] === "object" && row[key] !== null ? JSON.stringify(row[key]) : String(row[key] ?? "")));
     }
   }
   if (response) {
@@ -61,27 +66,41 @@ export async function importExcel(file: File) {
       );
     return String(v);
   };
-  const out: any = {};
+  let out: any = {};
+  const respaldo = w.getWorksheet("KuatiaPost JSON");
+  if (respaldo) {
+    let original = ""; respaldo.eachRow((fila, n) => { if (n > 1) original += text(fila.getCell(1)); });
+    if (original) out = parseObject(original);
+  }
   header.eachRow((row, n) => {
     if (n === 1) return;
     const key = text(row.getCell(1));
     if (!key) return;
     if (["__proto__", "constructor", "prototype"].includes(key))
       throw Error("Nombre de campo inválido.");
-    out[key] = text(row.getCell(2));
+    const nuevo = text(row.getCell(2));
+    if (String(out[key] ?? "") !== nuevo) out[key] = nuevo;
   });
   for (const sh of w.worksheets) {
-    if (["Cabecera", "Respuesta"].includes(sh.name)) continue;
+    if (["Cabecera", "Respuesta", "KuatiaPost JSON"].includes(sh.name)) continue;
     const keys: string[] = [];
     sh.getRow(1).eachCell((cell, n) => (keys[n - 1] = text(cell)));
     if (keys.some((k) => ["__proto__", "constructor", "prototype"].includes(k)))
       throw Error("Nombre de campo inválido.");
+    if (["__proto__", "constructor", "prototype"].includes(sh.name)) throw Error("Nombre de hoja no admitido.");
+    const anteriores = out[sh.name] || [];
     const rows: any[] = [];
     sh.eachRow({ includeEmpty: true }, (row, n) => {
       if (n === 1) return;
-      rows.push(
-        Object.fromEntries(keys.map((k, i) => [k, text(row.getCell(i + 1))])),
-      );
+      const fila: any = { ...(anteriores[n - 2] || {}) };
+      keys.forEach((k, i) => {
+        const v = text(row.getCell(i + 1));
+        if (!(k in fila) && !v) return;
+        const anterior = fila[k];
+        const comparable = anterior && typeof anterior === "object" ? JSON.stringify(anterior) : String(anterior ?? "");
+        if (v !== comparable || anterior === undefined) fila[k] = v;
+      });
+      rows.push(fila);
     });
     out[sh.name] = rows;
   }
@@ -118,7 +137,7 @@ function textoCelda(valor: any) {
 export async function exportHistory(registros: any[]) {
   const { default: ExcelJS } = await import("exceljs");
   const libro = new ExcelJS.Workbook();
-  const documentos = libro.addWorksheet("Documentos");
+  const documentos = libro.addWorksheet("Datos");
   const claves = [
     ...new Set(
       registros.flatMap((r) =>
@@ -185,7 +204,7 @@ export async function exportHistory(registros: any[]) {
   const nombres: Record<string, string> = {
     Detalles: "Productos",
     Subtotales: "Totales",
-    DocumentosAsociados: "Documentos asociados",
+    DocumentosAsociados: "Datos asociados",
   };
   for (const [grupo, filas] of Object.entries(grupos)) {
     const hoja = libro.addWorksheet((nombres[grupo] || grupo).slice(0, 31));
@@ -242,7 +261,7 @@ export async function exportarEjemploMasivo() {
       },
       response: {
         http: "",
-        data: { message: "Ejemplo ilustrativo; no es un documento emitido." },
+        data: { message: "Ejemplo ilustrativo; no es un registro emitido." },
       },
     },
   ]);

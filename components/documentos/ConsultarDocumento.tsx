@@ -58,16 +58,16 @@ export default function ConsultarDocumento({
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">DOCUMENTOS EMITIDOS</div>
+          <div className="eyebrow">DATOS EMITIDOS</div>
           <h1>Consulta y KUDE</h1>
-          <p>Buscá un documento por su numeración.</p>
+          <p>Buscá un registro por su numeración.</p>
         </div>
       </div>
       <section className="panel consulta-panel">
         <div className="consulta-campos">
           <label className="field">
             <span>
-              Tipo de documento <b className="asterisco">*</b>
+              Tipo de operación <b className="asterisco">*</b>
             </span>
             <select
               value={datos.tipoDoc}
@@ -84,7 +84,7 @@ export default function ConsultarDocumento({
             [
               ["dEst", "Establecimiento", 3],
               ["dPunExp", "Punto de expedición", 3],
-              ["dNumDoc", "Número del documento", 7],
+              ["dNumDoc", "Número de referencia", 7],
             ] as const
           ).map(([codigo, texto, longitud]) => (
             <label className="field" key={codigo}>
@@ -148,7 +148,7 @@ export default function ConsultarDocumento({
           )}
           {estado && (
             <p>
-              Estado del documento: <strong>{estado}</strong>
+              Estado de la operación: <strong>{estado}</strong>
             </p>
           )}
           {(resultado.data?.CDC || resultado.data?.message?.CDC) && (
@@ -169,7 +169,7 @@ export default function ConsultarDocumento({
       {pdf && (
         <section className="panel visor-panel">
           <div className="panel-top">
-            <strong>KUDE del documento</strong>
+            <strong>KUDE</strong>
             <div className="consulta-acciones">
               <button
                 className="outline"
@@ -193,7 +193,7 @@ export default function ConsultarDocumento({
           </div>
           {urlPdf && (
             <iframe
-              title="KUDE del documento consultado"
+              title="KUDE consultado"
               src={urlPdf}
               className="visor-kude"
             />

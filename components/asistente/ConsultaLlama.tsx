@@ -35,7 +35,7 @@ export default function ConsultaLlama({
         <div>
           <div className="eyebrow">EXPLICACIONES CON REFERENCIAS</div>
           <h1>Asistente</h1>
-          <p>Consultá cómo completar los documentos o resolver un error.</p>
+          <p>Consultá cómo completar los datos o resolver un error.</p>
         </div>
         <span className="tag">Asistente integrado</span>
       </div>
@@ -58,7 +58,7 @@ export default function ConsultaLlama({
 
           </div>
           {error && <div className="aviso-asistente" role="alert"><strong>No se pudo completar la consulta</strong><p>{error}</p></div>}
-          {aiBusy && <p role="status">El asistente está preparando la explicación. En equipos sin GPU puede tardar unos minutos.</p>}
+          {aiBusy && <p role="status">El asistente está revisando la información para preparar una explicación.</p>}
           {answer && (
             <div className="answer">
               <span className="section-label">EXPLICACIÓN DEL ASISTENTE</span>
@@ -89,7 +89,7 @@ export default function ConsultaLlama({
           </div>
           <p className="tiny">
             La IA explica las fuentes; la validación y aprobación final
-            corresponden al servicio de documentos.
+            corresponden al servicio de datos.
           </p>
         </section>
         <section className="panel sources-panel">

@@ -36,12 +36,12 @@ export function revisarConsulta(datos: DatosConsulta) {
   for (const [campo, largo, nombre] of [
     ["dEst", 3, "Establecimiento"],
     ["dPunExp", 3, "Punto de expedición"],
-    ["dNumDoc", 7, "Número del documento"],
+    ["dNumDoc", 7, "Número de referencia"],
   ] as const)
     if (!new RegExp(`^\\d{${largo}}$`).test(datos[campo]))
       errores.push(`${nombre}: completá ${largo} dígitos.`);
   if (!tiposConsulta.some(([codigo]) => codigo === datos.tipoDoc))
-    errores.push("Seleccioná el tipo de documento.");
+    errores.push("Seleccioná el tipo de registro.");
   return errores;
 }
 

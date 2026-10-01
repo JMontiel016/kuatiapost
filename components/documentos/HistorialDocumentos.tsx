@@ -24,7 +24,7 @@ export default function HistorialDocumentos({
       <div className="page-heading">
         <div>
           <div className="eyebrow">ACTIVIDAD DE ESTA SESIÓN</div>
-          <h1>Documentos y solicitudes</h1>
+          <h1>Datos y solicitudes</h1>
           <p>Revisá los envíos, sus respuestas y exportá los datos a Excel.</p>
         </div>
         <button
@@ -32,7 +32,7 @@ export default function HistorialDocumentos({
           disabled={!records.length}
           onClick={() =>
             attempt(async () =>
-              save(await exportHistory(records), "Documentos.xlsx"),
+              save(await exportHistory(records), "Datos.xlsx"),
             )
           }
         >
@@ -41,7 +41,7 @@ export default function HistorialDocumentos({
         </button>
         <button className="primary" onClick={() => setView("workspace")}>
           <Plus size={16} />
-          Nuevo documento
+          Nuevo registro
         </button>
       </div>
       <section className="panel history">
@@ -49,7 +49,7 @@ export default function HistorialDocumentos({
           <table>
             <thead>
               <tr>
-                <th>Documento</th>
+                <th>Registro</th>
                 <th>Operación</th>
                 <th>Fecha</th>
                 <th>Respuesta</th>
@@ -121,7 +121,7 @@ export default function HistorialDocumentos({
             <h3>Todavía no hay solicitudes</h3>
             <p>Los envíos y consultas de esta sesión aparecerán acá.</p>
             <button className="outline" onClick={() => setView("workspace")}>
-              Ir al envío de documentos
+              Ir al envío de datos
             </button>
           </div>
         )}

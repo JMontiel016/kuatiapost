@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  Sun,
+  Moon,
   Braces,
   Send,
   FileJson,
@@ -42,13 +44,13 @@ import {
 import CamposDocumento, {
   type CampoEnfocado,
 } from "../documentos/CamposDocumento";
-import BurbujaAyuda from "../asistente/BurbujaAyuda";
+import ManualUso from "../manual/ManualUso";
+import { importarDatos, exportarXML } from "../../lib/documentos/archivos-datos";
+import LogoKuatiaPost from "../marca/LogoKuatiaPost";
 import Field from "../formularios/CampoTexto";
 import {
   exportExcel,
   importExcel,
-  exportHistory,
-  exportarEjemploMasivo,
 } from "../../lib/documentos/excel-documentos";
 import ConfiguracionIntegracion from "../configuracion/ConfiguracionIntegracion";
 import ConsultaLlama from "../asistente/ConsultaLlama";
@@ -61,10 +63,10 @@ import {
 } from "../../lib/integracion/consulta-kude";
 import GenerarNotaCredito from "../documentos/GenerarNotaCredito";
 
-type View = "workspace" | "consulta" | "assistant" | "settings";
+type View = "workspace" | "consulta" | "assistant" | "settings" | "manual";
 /** Las pantallas describen tareas concretas; no hay login porque el acceso es público. */
 const navigation = [
-  { id: "workspace", label: "Envío de documentos", icon: Braces },
+  { id: "workspace", label: "Envío de datos", icon: Braces },
   { id: "consulta", label: "Consulta y KUDE", icon: Files },
   { id: "assistant", label: "Asistente", icon: MessageSquare },
 ];
@@ -84,7 +86,7 @@ export default function EnvioDocumentos() {
     null,
   );
 
-  // Navegación, tipo de documento y vista del editor.
+  // Navegación, tipo de registro y vista del editor.
   const [view, setView] = useState<View>("workspace"),
     [type, setType] = useState("1"),
     [mode, setMode] = useState("emit"),
@@ -126,11 +128,28 @@ export default function EnvioDocumentos() {
   const [busy, setBusy] = useState(false),
     [response, setResponse] = useState<any>(null),
     [records, setRecords] = useState<any[]>([]),
-    [notice, setNotice] = useState(""),
+    [notice, cambiarNotice] = useState(""),
     [errors, setErrors] = useState<string[]>([]),
     [find, setFind] = useState(""),
     [replace, setReplace] = useState("");
 
+  const [tipoAviso, cambiarTipoAviso] = useState("info");
+  const [oscuro, cambiarOscuro] = useState(false);
+  const [verRespuesta, cambiarVerRespuesta] = useState(true);
+  function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
+  // Avisos temporales; no se eliminan ni el borrador ni los errores de campo.
+  useEffect(() => {
+    if (!notice) return;
+    const reloj = window.setTimeout(() => cambiarNotice(""), 6500);
+    return () => window.clearTimeout(reloj);
+  }, [notice]);
+  useEffect(() => { document.documentElement.dataset.tema = oscuro ? "oscuro" : "claro"; }, [oscuro]);
+  useEffect(() => {
+    // Evita restaurar credenciales mediante la caché de navegación al volver.
+    const volver = (e: PageTransitionEvent) => { if (e.persisted) window.location.reload(); };
+    window.addEventListener("pageshow", volver);
+    return () => window.removeEventListener("pageshow", volver);
+  }, []);
   // La consulta tiene un borrador independiente de la emisión y del asistente.
   const [datosConsulta, setDatosConsulta] = useState<DatosConsulta>({
     dEst: "",
@@ -211,7 +230,7 @@ export default function EnvioDocumentos() {
         {
           name: "stage_document_json",
           description:
-            "Carga un JSON editable en la mesa de trabajo. No envía documentos.",
+            "Carga un JSON editable en la mesa de trabajo. No envía datos.",
           inputSchema: {
             type: "object",
             properties: { json: { type: "string" } },
@@ -243,7 +262,7 @@ export default function EnvioDocumentos() {
     try {
       await fn();
     } catch (e: any) {
-      setNotice(e.message || "No se completó la operación.");
+      setNotice(e.message || "No se completó la operación. Volvé a intentar y revisá la conexión.", "error");
     }
   };
 
@@ -312,7 +331,7 @@ export default function EnvioDocumentos() {
         setNotice(
           operacion === "kude"
             ? "KUDE recibido. Ya podés visualizarlo o descargarlo."
-            : "Estado del documento consultado.",
+            : "Estado de la operación consultado.", "success",
         );
       } finally {
         setBusy(false);
@@ -330,7 +349,7 @@ export default function EnvioDocumentos() {
         const problems = validateDocument(data, type);
         setErrors(problems);
         if (problems.length) {
-          setNotice("Completá los campos indicados antes de enviar.");
+          setNotice("Completá los campos indicados antes de enviar.", "warning");
           return;
         }
         if (
@@ -382,7 +401,7 @@ export default function EnvioDocumentos() {
           );
         setToken(t);
         setNotice(
-          "Token generado. Se utilizará en todos los envíos y consultas.",
+          "Token generado. Se utilizará en todos los envíos y consultas.", "success",
         );
       } finally {
         setBusy(false);
@@ -395,16 +414,14 @@ export default function EnvioDocumentos() {
     await attempt(async () => {
       if (f.size > 10_000_000)
         throw Error("El archivo debe pesar menos de 10 MB.");
-      const doc = f.name.endsWith(".xlsx")
-        ? await importExcel(f)
-        : parseObject(await f.text());
-      setBody(pretty(vaciarCamposOpcionales(doc, String(doc.iTiDE || type))));
+      const doc = await importarDatos(f);
+      setBody(pretty(doc));
       if (documentTypes.some((d) => d.id === String(doc.iTiDE)))
         setType(String(doc.iTiDE));
       setMode("emit");
       setView("workspace");
       setErrors([]);
-      setNotice("Documento cargado. Revisá el JSON antes de enviarlo.");
+      setNotice("Datos cargados. Revisá el JSON antes de enviarlo.", "success");
     });
   }
 
@@ -496,13 +513,13 @@ export default function EnvioDocumentos() {
           }}
         >
           <span className="brand-mark">
-            <Braces size={23} />
+            <LogoKuatiaPost />
           </span>
           <span>
-            KuatiaPost<span className="brand-sub">DOCUMENTOS</span>
+            KuatiaPost<span className="brand-sub">DATOS</span>
           </span>
         </a>
-        <div className="workspace-label">DOCUMENTOS ELECTRÓNICOS</div>
+        <div className="workspace-label">GESTIÓN DE DATOS</div>
         <nav>
           {navigation.map((n) => (
             <button
@@ -515,12 +532,6 @@ export default function EnvioDocumentos() {
               {n.id === "workspace" && <span className="nav-dot" />}
             </button>
           ))}
-        </nav>
-        <div className="sidebar-note">
-          <ShieldCheck size={20} />
-          <strong>Tu conexión, tus datos</strong>
-          <p>Credenciales y documentos permanecen en esta sesión.</p>
-        </div>
         <button
           className={
             view === "settings"
@@ -532,8 +543,15 @@ export default function EnvioDocumentos() {
           <Settings size={19} />
           Configuración
         </button>
+        </nav>
+        <div className="sidebar-note">
+          <ShieldCheck size={20} />
+          <strong>Tu conexión, tus datos</strong>
+          <p>Credenciales y datos permanecen en esta sesión.</p>
+        </div>
+        <button className={view === "manual" ? "nav-item active" : "nav-item"} onClick={() => setView("manual")}><FileCode size={19}/>Manual de uso</button>
         <div className="sidebar-footer">
-          <span className="avatar">K</span>
+          <span className="logo-publico"><LogoKuatiaPost /></span>
           <div>
             Acceso público<small>Sin cuenta · sin instalación</small>
           </div>
@@ -544,17 +562,20 @@ export default function EnvioDocumentos() {
           <div className="breadcrumb">
             KuatiaPost <ChevronRight size={14} />
             <strong>
-              {navigation.find((n) => n.id === view)?.label || "Configuración"}
+              {view === "manual" ? "Manual de uso" : navigation.find((n) => n.id === view)?.label || "Configuración"}
             </strong>
           </div>
-          <div className="top-actions">
-            <span className="tag">KuatiaPost</span>
-            <span className="tiny">POST predeterminado</span>
-          </div>
+          {/* Control compacto del tema, accesible también con teclado. */}
+          <button className="theme-toggle" onClick={() => cambiarOscuro(!oscuro)}
+            aria-label={oscuro ? "Activar modo claro" : "Activar modo oscuro"}
+            title={oscuro ? "Activar modo claro" : "Activar modo oscuro"}
+            aria-pressed={oscuro}>
+            {oscuro ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
         </header>
         {notice && (
-          <div role="status" className="notice">
-            <AlertTriangle size={18} />
+          <div role={tipoAviso === "error" ? "alert" : "status"} className={`notice aviso-${tipoAviso}`}>
+            {tipoAviso === "success" ? <Check size={18}/> : <AlertTriangle size={18} />}
             <span>{notice}</span>
             <button aria-label="Cerrar mensaje" onClick={() => setNotice("")}>
               <X size={16} />
@@ -567,9 +588,9 @@ export default function EnvioDocumentos() {
               <div className="page-heading">
                 <div>
                   <div className="eyebrow">PREPARAR · ENVIAR · CONSULTAR</div>
-                  <h1>Envío de documentos</h1>
+                  <h1>Envío de datos</h1>
                   <p>
-                    Conectá tu integración y trabajá con documentos
+                    Conectá tu integración y trabajá con datos
                     electrónicos.
                   </p>
                 </div>
@@ -612,13 +633,13 @@ export default function EnvioDocumentos() {
                         value={mode}
                         onChange={(e) => chooseMode(e.target.value)}
                       >
-                        <option value="emit">Emitir documento</option>
+                        <option value="emit">Emitir registro</option>
                         <option value="custom">Solicitud personalizada</option>
                       </select>
                     </label>
                     <span className="tiny">
                       {mode === "emit"
-                        ? `Código de documento: ${type}`
+                        ? `Código de operación: ${type}`
                         : "Completá el JSON que recibe tu servicio."}
                     </span>
                   </div>
@@ -778,29 +799,19 @@ export default function EnvioDocumentos() {
                     </span>
                   </div>
                   {errors.length > 0 && (
-                    <div className="validation">
-                      <strong>Campos por revisar</strong>
-                      {errors.slice(0, 15).map((e, i) => (
-                        <p key={i}>{e}</p>
-                      ))}
-                      {errors.length > 15 && (
-                        <p>Y {errors.length - 15} campos más.</p>
-                      )}
-                    </div>
+                    <details className="validation" open>
+                      <summary>Campos por revisar ({errors.length}) · pulsá para desplegar o minimizar</summary>
+                      <div className="errores-desplegables">{errors.map((e, i) => <p key={i}>{e}</p>)}</div>
+                    </details>
                   )}
                   <div className="bottom-tools">
                     <button
                       onClick={() =>
                         attempt(() => {
                           const p = parseObject(body);
-                          setErrors(
-                            mode === "emit" ? validateDocument(p, type) : [],
-                          );
-                          setNotice(
-                            mode === "emit"
-                              ? "Revisión de campos completada. El servicio confirma la aceptación del documento."
-                              : "JSON válido. Revisá los datos de la solicitud.",
-                          );
+                          const problemas = mode === "emit" ? validateDocument(p, type) : [];
+                          setErrors(problemas);
+                          setNotice(problemas.length ? `Revisá ${problemas.length} campos señalados.` : "Revisión completada sin problemas detectados en la plantilla.", problemas.length ? "warning" : "success");
                         })
                       }
                     >
@@ -811,7 +822,7 @@ export default function EnvioDocumentos() {
                       onClick={() =>
                         attempt(async () => {
                           await navigator.clipboard.writeText(body);
-                          setNotice("JSON copiado.");
+                          setNotice("JSON copiado.", "success");
                         })
                       }
                     >
@@ -843,6 +854,8 @@ export default function EnvioDocumentos() {
                       <Download size={16} />
                       JSON
                     </button>
+                    <button onClick={() => attempt(() => save(new Blob([pretty(parseObject(body))], {type:"text/plain"}), `${selected.short}.txt`))}><Download size={16}/>TXT</button>
+                    <button title="XML de intercambio de KuatiaPost" onClick={() => attempt(() => save(exportarXML(parseObject(body)), `${selected.short}.xml`))}><FileCode size={16}/>XML</button>
                     <button onClick={() => downloadExcel()}>
                       <ArrowDownToLine size={16} />
                       Excel
@@ -851,8 +864,8 @@ export default function EnvioDocumentos() {
                 </section>
                 <aside className="right-column">
                   <section className="panel import-panel">
-                    <div className="section-label">PREPARÁ TU DOCUMENTO</div>
-                    <h3>Cargar datos del documento</h3>
+                    <div className="section-label">PREPARÁ TUS DATOS</div>
+                    <h3>Cargar datos del registro</h3>
                     <p>
                       Completá los campos o importá tus datos. El JSON queda
                       siempre editable.
@@ -865,8 +878,8 @@ export default function EnvioDocumentos() {
                         <Upload size={18} />
                       </span>
                       <span>
-                        <strong>Importar Excel o JSON</strong>
-                        <small>Usá el formato de la plantilla Excel</small>
+                        <strong>Importar archivo</strong>
+                        <small>JSON, TXT, XML o Excel (.xlsx)</small>
                       </span>
                       <ChevronRight size={16} />
                     </button>
@@ -874,7 +887,7 @@ export default function EnvioDocumentos() {
                       ref={file}
                       type="file"
                       hidden
-                      accept=".json,.xlsx"
+                      accept=".json,.txt,.xml,.xlsx"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) loadFile(f);
@@ -895,54 +908,11 @@ export default function EnvioDocumentos() {
                       <ChevronRight size={16} />
                     </button>
                     <button
-                      className="import-option"
-                      onClick={() =>
-                        attempt(async () =>
-                          save(
-                            await exportarEjemploMasivo(),
-                            "Ejemplo-exportacion-masiva.xlsx",
-                          ),
-                        )
-                      }
-                    >
-                      <span className="import-icon">
-                        <Download size={18} />
-                      </span>
-                      <span>
-                        <strong>Ejemplo de exportación masiva</strong>
-                        <small>
-                          Un documento de ejemplo y hojas relacionadas
-                        </small>
-                      </span>
-                    </button>
-                    <button
-                      className="import-option"
-                      disabled={!records.length}
-                      onClick={() =>
-                        attempt(async () =>
-                          save(
-                            await exportHistory(records),
-                            "KuatiaPost-documentos-sesion.xlsx",
-                          ),
-                        )
-                      }
-                    >
-                      <span className="import-icon">
-                        <Files size={18} />
-                      </span>
-                      <span>
-                        <strong>Exportar sesión a Excel</strong>
-                        <small>
-                          {records.length} solicitudes de esta sesión
-                        </small>
-                      </span>
-                    </button>
-                    <button
                       className="text-button reset"
                       onClick={() => {
                         if (
                           window.confirm(
-                            "¿Vaciar los campos del documento actual?",
+                            "¿Vaciar los campos del registro actual?",
                           )
                         ) {
                           setBody(pretty(template(type)));
@@ -954,36 +924,7 @@ export default function EnvioDocumentos() {
                       Restablecer plantilla
                     </button>
                   </section>
-                  <section className="panel guidance">
-                    <span className="assistant-symbol">
-                      <MessageSquare size={22} />
-                    </span>
-                    <h3>
-                      Entendé el error.
-                      <br />
-                      Encontrá la solución.
-                    </h3>
-                    <p>
-                      El asistente explica los campos y errores usando el manual
-                      y las notas técnicas.
-                    </p>
-                    <button
-                      className="outline"
-                      onClick={() => {
-                        setView("assistant");
-                        if (response)
-                          setQuestion(
-                            "Explicá este error del documento: " +
-                              pretty(response.data).slice(0, 1500),
-                          );
-                      }}
-                    >
-                      Consultar al asistente
-                    </button>
-                    <span className="tiny">
-                      Con referencias al documento y la página
-                    </span>
-                  </section>
+
                 </aside>
               </div>
               <section className="response-panel panel">
@@ -992,7 +933,7 @@ export default function EnvioDocumentos() {
                     <span className="square-icon">
                       <PanelLeft size={18} />
                     </span>
-                    <strong>Respuesta de la integración</strong>
+                    <strong>Respuesta del servicio</strong><button className="outline" aria-expanded={verRespuesta} onClick={() => cambiarVerRespuesta(!verRespuesta)}>{verRespuesta ? "Minimizar" : "Desplegar"}</button>
                   </div>
                   {response ? (
                     <div className="response-meta">
@@ -1014,7 +955,7 @@ export default function EnvioDocumentos() {
                     <span className="tiny">Sin solicitudes enviadas</span>
                   )}
                 </div>
-                {response ? (
+                {verRespuesta && (response ? (
                   <pre className="response-code">{pretty(response.data)}</pre>
                 ) : (
                   <div className="empty-response">
@@ -1025,10 +966,11 @@ export default function EnvioDocumentos() {
                       enviar.
                     </p>
                   </div>
-                )}
+                ))}
               </section>
             </>
           )}
+          {view === "manual" && <ManualUso />}
           {view === "settings" && (
             <ConfiguracionIntegracion
               authUrl={authUrl}
@@ -1050,18 +992,12 @@ export default function EnvioDocumentos() {
               compartirKude={compartirKude} setCompartirKude={setCompartirKude}
             />
           )}
+          {/* El asistente queda anunciado sin consultas ni solicitudes al proveedor. */}
           {view === "assistant" && (
-            <ConsultaLlama
-              error={aiError}
-              question={question}
-              setQuestion={setQuestion}
-              answer={answer}
-              sources={sources}
-              includeDoc={includeDoc}
-              setIncludeDoc={setIncludeDoc}
-              aiBusy={aiBusy}
-              askLlama={askLlama}
-            />
+            <section className="panel asistente-proximamente" role="status">
+              <h1>Asistente</h1>
+              <p>Próximamente habilitado en KuatiaPost.</p>
+            </section>
           )}
           {view === "consulta" && (
             <ConsultarDocumento
@@ -1083,7 +1019,7 @@ export default function EnvioDocumentos() {
         </div>
         <footer className="main-footer">
           <span>KuatiaPost</span>
-          <span>Documentos electrónicos · Paraguay</span>
+          <span>Datos electrónicos · Paraguay</span>
           <span>Datos de sesión · Sin almacenamiento permanente</span>
         </footer>
       </main>
@@ -1104,17 +1040,7 @@ export default function EnvioDocumentos() {
           setView={setView}
         />
       )}
-      {view === "workspace" && mode === "emit" && (
-        <BurbujaAyuda
-          faltantes={faltantesActuales}
-          campo={campoEnfocado}
-          alPreguntar={(pregunta: string) => {
-            setQuestion(pregunta);
-            setView("assistant");
-            void askLlama(pregunta);
-          }}
-        />
-      )}
+
     </div>
   );
 }

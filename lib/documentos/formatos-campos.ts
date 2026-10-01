@@ -10,6 +10,23 @@ export type FormatoCampo = {
   referencia: string;
 };
 const formatos: Record<string, FormatoCampo> = {
+  dDesIndPres: { tipo: "texto", minimo: 10, maximo: 30, decimales: 0, referencia: "Reglas de campos" },
+  dDTipIDRec: { tipo: "texto", minimo: 9, maximo: 41, decimales: 0, referencia: "Reglas de campos" },
+  dDesTiPag: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "Reglas de campos" },
+  dNumCheq: { tipo: "texto", minimo: 8, maximo: 8, decimales: 0, referencia: "Reglas de campos" },
+  dBcoEmi: { tipo: "texto", minimo: 4, maximo: 20, decimales: 0, referencia: "Reglas de campos" },
+  iDenTarj: { tipo: "numero", minimo: 1, maximo: 2, decimales: 0, referencia: "Reglas de campos" },
+  dDesDenTarj: { tipo: "texto", minimo: 4, maximo: 20, decimales: 0, referencia: "Reglas de campos" },
+  iForProPa: { tipo: "numero", minimo: 1, maximo: 1, decimales: 0, referencia: "Reglas de campos" },
+  dRSProTar: { tipo: "texto", minimo: 4, maximo: 60, decimales: 0, referencia: "Reglas de campos" },
+  dRUCProTar: { tipo: "numero", minimo: 3, maximo: 8, decimales: 0, referencia: "Reglas de campos" },
+  dDVProTar: { tipo: "numero", minimo: 1, maximo: 1, decimales: 0, referencia: "Reglas de campos" },
+  dCodAuOpe: { tipo: "numero", minimo: 6, maximo: 10, decimales: 0, referencia: "Reglas de campos" },
+  dNomTit: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "Reglas de campos" },
+  dNumTarj: { tipo: "numero", minimo: 4, maximo: 4, decimales: 0, referencia: "Reglas de campos" },
+  iCondCred: { tipo: "numero", minimo: 1, maximo: 1, decimales: 0, referencia: "Reglas de campos" },
+  dPlazoCre: { tipo: "texto", minimo: 2, maximo: 15, decimales: 0, referencia: "Reglas de campos" },
+  dCuotas: { tipo: "numero", minimo: 1, maximo: 3, decimales: 0, referencia: "Reglas de campos" },
   dInfoEmi: {
     tipo: "texto",
     minimo: 1,
@@ -835,7 +852,7 @@ export function errorFormato(codigo: string, valor: unknown): string {
   if (!f) return "";
   const texto = String(valor);
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/u.test(texto))
-    return "Contiene caracteres no admitidos en el documento.";
+    return "Contiene caracteres no admitidos en el registro.";
   if (f.tipo === "fecha" || f.tipo === "fecha-dia") {
     const patron =
       f.tipo === "fecha"

@@ -14,7 +14,7 @@ const blank = (fields: string) =>
 export function crearPlantilla(type: string) {
   // Cabecera común: los códigos conservan su nombre esperado por la integración.
   const common = blank(
-    "tipOpe iTiDE dEst dPunExp dNumDoc dFeEmiDE dInfoEmi dInfoFisc iTipTra iTImp cMoneOpe dCondTiCam dTiCam iIndPres iNatRec iTiOpe cPaisRec iTiContRec dRucRec dDVRec iTipIDRec dNumIDRec dNomRec dDirRec dNumCasRec cDepRec cDisRec cCiuRec dTelRec dCelRec dEmailRec",
+    "tipOpe iTiDE dEst dPunExp dNumDoc dFeEmiDE dInfoEmi dInfoFisc iTipTra iTImp cMoneOpe dCondTiCam dTiCam iIndPres dDesIndPres iNatRec iTiOpe cPaisRec iTiContRec dRucRec dDVRec iTipIDRec dDTipIDRec dNumIDRec dNomRec dDirRec dNumCasRec cDepRec cDisRec cCiuRec dTelRec dCelRec dEmailRec",
   );
 
   // Cada documento tiene su propia cabecera: no se exponen campos de otros tipos.
@@ -33,8 +33,8 @@ export function crearPlantilla(type: string) {
   let extra: any = {};
   if (type === "1")
     extra = {
-      ...blank("iCondOpe"),
-      Pagos: [blank("iTiPago dMonTiPag cMoneTiPag dTiCamTiPag")],
+      ...blank("iCondOpe iCondCred dPlazoCre dCuotas dMonEnt"),
+      Pagos: [blank("iTiPago dDesTiPag dMonTiPag cMoneTiPag dTiCamTiPag dNumCheq dBcoEmi iDenTarj dDesDenTarj iForProPa dRSProTar dRUCProTar dDVProTar dCodAuOpe dNomTit dNumTarj")],
     };
   if (["5", "6"].includes(type))
     extra = {
@@ -53,9 +53,9 @@ export function crearPlantilla(type: string) {
       Entrega: [blank("dDirLocEnt dNumCasEnt cDepEnt cDisEnt cCiuEnt")],
     };
   if (type === "4")
-    extra = blank(
+    extra = { ...blank("iCondOpe iCondCred dPlazoCre dCuotas dMonEnt"), Pagos: [blank("iTiPago dDesTiPag dMonTiPag cMoneTiPag dTiCamTiPag dNumCheq dBcoEmi iDenTarj dDesDenTarj iForProPa dRSProTar dRUCProTar dDVProTar dCodAuOpe dNomTit dNumTarj")], ...blank(
       "iNatVen iTipIDVen dNumIDVen dNomVen dDirVen dNumCasVen cDepVen cDisVen cCiuVen dDirProv cDepProv cDisProv cCiuProv",
-    );
+    ) };
 
   // La remisión no contiene el grupo de importes de venta.
   return {
