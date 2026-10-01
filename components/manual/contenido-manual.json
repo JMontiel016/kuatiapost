@@ -1,0 +1,1133 @@
+[
+  {
+    "id": "configuracion",
+    "titulo": "Configuración y token",
+    "imagen": "capturas/configuracion.png",
+    "pasos": [
+      "Abrí Configuración desde el menú. Indicá la URL completa para enviar datos, la URL para consultar y la URL para generar el token. Pueden pertenecer a servicios diferentes; no copies una dirección en todos los campos sin verificarla.",
+      "Si consulta y KUDE comparten dirección, marcá Usar la URL de consulta para el KUDE. Si son diferentes, desmarcá la casilla y completá la URL del KUDE.",
+      "Completá Usuario y Contraseña con las credenciales de tu integración. Usuario corresponde a ruc y Contraseña a password en el JSON de autenticación.",
+      "El botón del ojo permite mostrar u ocultar la contraseña. Ver y editar JSON abre el cuerpo de autenticación; ocultarlo no borra los valores.",
+      "El JSON comienza con las claves ruc y password. Podés añadir las propiedades que requiera tu API. Los campos y el JSON se sincronizan cuando el contenido tiene sintaxis válida.",
+      "Pulsá Generar token una sola vez y esperá la respuesta. Si fue correcta, el token se comparte con los envíos y las consultas durante esta sesión.",
+      "Podés ingresar otro token manualmente, verlo con el ojo o eliminarlo con el botón correspondiente. Su duración depende del servicio que lo genera; KuatiaPost no renueva el token automáticamente."
+    ],
+    "zonas": [
+      {
+        "x": 0,
+        "y": 17,
+        "w": 49,
+        "h": 80,
+        "t": "Direcciones de envío, consulta y KUDE"
+      },
+      {
+        "x": 50,
+        "y": 17,
+        "w": 49,
+        "h": 80,
+        "t": "Autenticación, contraseña y token"
+      }
+    ],
+    "objetivo": "Conectar KuatiaPost con los servicios que vas a utilizar.",
+    "resultado": "Las direcciones y el token quedan disponibles al cambiar de apartado.",
+    "avisos": [
+      "Si no aparece el token, revisá la respuesta de autenticación y la ruta configurada para localizarlo. Un resultado HTTP correcto no garantiza que el cuerpo contenga el token.",
+      "No incluyas credenciales reales en capturas, archivos o ejemplos que compartas. Mostrar el JSON permite ver su contraseña."
+    ],
+    "imagenesAdicionales": [
+      {
+        "imagen": "capturas/autenticacion.png",
+        "titulo": "JSON de autenticación visible y editable"
+      }
+    ],
+    "controles": [
+      {
+        "nombre": "Usar la URL de consulta para el KUDE",
+        "funcion": "Selecciona si consulta y KUDE utilizan la misma dirección.",
+        "uso": "Marcala cuando tu servicio use una única URL; desmarcala para informar otra URL del KUDE.",
+        "resultado": "El formulario muestra u oculta la dirección independiente del KUDE.",
+        "detalle": "La casilla no prueba la conexión ni cambia el contrato de la API."
+      },
+      {
+        "nombre": "Ojo de la contraseña",
+        "funcion": "Alterna entre contraseña oculta y visible.",
+        "uso": "Pulsalo para comprobar lo escrito; pulsalo otra vez para ocultarlo.",
+        "resultado": "Cambia la presentación del campo, sin modificar su valor.",
+        "detalle": "No envía credenciales ni elimina la contraseña; el JSON visible puede mostrarla igualmente."
+      },
+      {
+        "nombre": "Ver y editar JSON / Ocultar JSON",
+        "funcion": "Abre o cierra el editor de autenticación.",
+        "uso": "Usalo para revisar ruc y password o añadir las propiedades que solicite tu servicio.",
+        "resultado": "El JSON válido sincroniza Usuario y Contraseña. Ocultarlo conserva su contenido.",
+        "detalle": "Con sintaxis inválida aparece un aviso; corregilo antes de generar el token."
+      },
+      {
+        "nombre": "Generar token",
+        "funcion": "Envía el JSON de autenticación por POST a la URL del token.",
+        "uso": "Completá la dirección y las credenciales; después pulsá una vez.",
+        "resultado": "Durante la solicitud muestra Generando; si la respuesta permite localizarlo, guarda el token compartido.",
+        "detalle": "No realiza una emisión. La vigencia depende del servicio y no hay renovación automática."
+      },
+      {
+        "nombre": "Ojo del token",
+        "funcion": "Muestra u oculta el token en su campo.",
+        "uso": "Usalo para comprobar o copiar el valor; ocultalo al terminar.",
+        "resultado": "El token permanece igual y continúa disponible para las solicitudes.",
+        "detalle": "Mostrarlo no lo valida ni extiende su vigencia. No compartas capturas que lo incluyan."
+      },
+      {
+        "nombre": "Eliminar token",
+        "funcion": "Vacía el token compartido de la sesión.",
+        "uso": "Pulsalo cuando quieras retirar el acceso actual.",
+        "resultado": "Envios y consultas dejan de disponer de ese valor; el botón se desactiva cuando está vacío.",
+        "detalle": "No elimina la contraseña ni revoca el token en el servicio externo; solo lo retira de KuatiaPost."
+      }
+    ]
+  },
+  {
+    "id": "token",
+    "titulo": "Token en el área de envío",
+    "imagen": "capturas/token.png",
+    "zonas": [
+      {
+        "x": 1,
+        "y": 28,
+        "w": 98,
+        "h": 32,
+        "t": "Token compartido, visibilidad y acceso a configuración"
+      }
+    ],
+    "imagenesAdicionales": [],
+    "objetivo": "Ingresar o revisar el token sin salir de Envío de datos.",
+    "pasos": [
+      "Abrí la pestaña Token de acceso dentro de Envío de datos.",
+      "Pegá el token si ya lo obtuviste de tu servicio. El valor se comparte con la configuración y las consultas.",
+      "Usá el botón del ojo para mostrar u ocultar el valor. Ocultarlo no lo elimina.",
+      "Si todavía no lo tenés, pulsá Generar token para abrir Configuración y completar la autenticación.",
+      "Volvé a Editar JSON o Completar campos para continuar. Cambiar de pestaña conserva los datos de la sesión."
+    ],
+    "resultado": "El token queda disponible para las solicitudes de la sesión.",
+    "avisos": [
+      "La vigencia del token depende de tu servicio. Si expiró, generá otro y comprobá el resultado antes de repetir un envío."
+    ],
+    "controles": [
+      {
+        "nombre": "Token de acceso",
+        "funcion": "Abre la pestaña del token dentro del área de envío.",
+        "uso": "Usala para revisar o pegar el token sin cambiar el JSON.",
+        "resultado": "Muestra el campo compartido con Configuración y Consulta y KUDE.",
+        "detalle": "Editar el valor modifica el token de toda esta sesión, no solo el del registro visible."
+      },
+      {
+        "nombre": "Ojo del token",
+        "funcion": "Muestra u oculta el valor ingresado en esta pestaña.",
+        "uso": "Pulsalo para inspeccionar el token.",
+        "resultado": "Solo cambia su visibilidad.",
+        "detalle": "No genera un token nuevo ni comprueba si expiró."
+      },
+      {
+        "nombre": "Generar token desde Envío de datos",
+        "funcion": "Abre Configuración para preparar la autenticación.",
+        "uso": "Usalo cuando todavía no tengas un token o necesites obtener otro.",
+        "resultado": "Se muestra Configuración; allí debes pulsar Generar token después de completar los datos.",
+        "detalle": "El botón de esta pestaña es un acceso a Configuración: no envía por sí solo las credenciales."
+      }
+    ]
+  },
+  {
+    "id": "envio",
+    "titulo": "Preparar y enviar datos",
+    "imagen": "capturas/envio.png",
+    "pasos": [
+      "Abrí Envío de datos y elegí Factura, Nota de crédito, Nota de débito, Remisión o Autofactura. Cada tipo utiliza sus propios campos y conserva su borrador mientras trabajás.",
+      "En Operación elegí Emitir registro para utilizar la plantilla. El método de emisión es POST. Verificá la URL mostrada antes de enviar.",
+      "En Completar campos informá establecimiento (dEst) y punto de expedición (dPunExp) con tres dígitos, y número (dNumDoc) con siete. Conservá los ceros iniciales.",
+      "Completá la fecha, moneda y los datos aplicables al tipo elegido. Un asterisco indica que el campo es obligatorio para la selección actual. Las ayudas junto al campo explican las reglas disponibles.",
+      "Los cambios del formulario se reflejan en Editar JSON. Podés modificar el JSON libremente; mantené la sintaxis válida para volver a completar los campos.",
+      "Pulsá Revisar y corregí los puntos indicados debajo del editor. Volvé a revisar después de cualquier cambio.",
+      "Para emitir, pulsá Enviar y comprobá la dirección y el tipo antes de aceptar la confirmación. La respuesta del servicio aparece en el panel de respuesta."
+    ],
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "objetivo": "Preparar una solicitud mediante una plantilla y enviarla a la dirección seleccionada.",
+    "resultado": "Se muestra el resultado de la solicitud realizada. Preparar, revisar o exportar no envía datos.",
+    "avisos": [
+      "La revisión aplica las reglas disponibles en KuatiaPost; la aceptación definitiva depende de tu integración.",
+      "No repitas una emisión solo porque tardó en responder: consultá su estado antes de intentar nuevamente."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Configurar conexión",
+        "funcion": "Abre el apartado Configuración.",
+        "uso": "Pulsalo antes de preparar una solicitud si faltan URL o token.",
+        "resultado": "Podés ajustar el servicio y regresar al área de envío.",
+        "detalle": "Abrir la configuración no borra el borrador ni prueba las direcciones."
+      },
+      {
+        "nombre": "Factura / Nota de crédito / Nota de débito / Remisión / Autofactura",
+        "funcion": "Selecciona el tipo de registro y su plantilla.",
+        "uso": "Elegí el tipo correspondiente antes de completar datos.",
+        "resultado": "Recupera el borrador de ese tipo si existe; en caso contrario carga su plantilla. Activa emisión y POST.",
+        "detalle": "Los borradores se mantienen mientras no recargues o cierres; verificá el tipo activo antes de enviar."
+      },
+      {
+        "nombre": "Operación: Emitir registro / Solicitud personalizada",
+        "funcion": "Alterna entre plantilla de emisión y cuerpo libre.",
+        "uso": "Elegí emisión para el formulario por tipo, o personalizada para preparar el contrato de tu servicio.",
+        "resultado": "Recupera el borrador del modo elegido y establece POST como método inicial.",
+        "detalle": "La solicitud personalizada no usa la confirmación ni la revisión automática del botón Enviar de las plantillas; revisala manualmente."
+      },
+      {
+        "nombre": "Método POST / GET",
+        "funcion": "Selecciona el método de la solicitud.",
+        "uso": "Usá POST para enviar un cuerpo. GET está habilitado solo en Solicitud personalizada.",
+        "resultado": "POST envía el JSON; GET consulta la URL sin enviar el cuerpo del editor.",
+        "detalle": "Los parámetros de GET deben estar en la URL cuando tu API los requiera."
+      },
+      {
+        "nombre": "Enviar",
+        "funcion": "Realiza la solicitud a la URL que aparece junto al botón.",
+        "uso": "Verificá URL, método, token y datos; luego pulsá una vez.",
+        "resultado": "En emisión revisa campos y pide confirmación; con autorización envía y actualiza Respuesta del servicio.",
+        "detalle": "Se desactiva mientras hay una solicitud o falta URL. Un HTTP exitoso no sustituye el estado de aprobación."
+      },
+      {
+        "nombre": "Aceptar / Cancelar en la confirmación de envío",
+        "funcion": "Confirma o interrumpe la emisión preparada.",
+        "uso": "Leé el tipo y la dirección del diálogo antes de aceptar.",
+        "resultado": "Aceptar continúa el envío. Cancelar conserva el borrador y no envía.",
+        "detalle": "Es un diálogo del navegador; su apariencia puede variar. La confirmación se utiliza en modo de emisión."
+      },
+      {
+        "nombre": "Editar JSON",
+        "funcion": "Muestra el editor de texto del cuerpo.",
+        "uso": "Usalo para revisar la solicitud completa o añadir propiedades.",
+        "resultado": "Podés editar claves, valores, objetos y listas.",
+        "detalle": "Una sintaxis inválida impide las acciones que necesitan interpretar el JSON."
+      },
+      {
+        "nombre": "Completar campos",
+        "funcion": "Muestra el formulario relacionado con el cuerpo JSON.",
+        "uso": "Usalo para completar datos mediante campos y selecciones.",
+        "resultado": "Las modificaciones se reflejan en el JSON cuando el contenido es válido.",
+        "detalle": "En solicitud personalizada muestra las propiedades existentes; para crear una nueva clave, añadila en el editor."
+      },
+      {
+        "nombre": "Formatear JSON: icono de llaves",
+        "funcion": "Reorganiza visualmente un JSON válido mediante su interpretación y serialización.",
+        "uso": "Usalo con un cuerpo que sea un objeto JSON sin registros adjuntos.",
+        "resultado": "Agrega sangría al cuerpo del editor.",
+        "detalle": "Es distinto de Ordenar JSON: no separa registros y puede normalizar números al interpretarlos. Para conservar sus literales, utilizá Ordenar JSON."
+      }
+    ]
+  },
+  {
+    "id": "receptor",
+    "imagen": "capturas/campos.png",
+    "zonas": [
+      {
+        "x": 2,
+        "y": 2,
+        "w": 96,
+        "h": 27,
+        "t": "Pestañas y campos opcionales"
+      },
+      {
+        "x": 2,
+        "y": 42,
+        "w": 96,
+        "h": 47,
+        "t": "Datos generales y numeración"
+      }
+    ],
+    "titulo": "Receptor y campos condicionales",
+    "objetivo": "Completar los datos que corresponden a la naturaleza del receptor y la operación.",
+    "pasos": [
+      "En Naturaleza del receptor elegí contribuyente o no contribuyente según el caso real. Esta selección modifica los datos de identificación que se solicitan.",
+      "Para contribuyente, completá el RUC, el dígito verificador y el tipo de contribuyente. Para no contribuyente, revisá el tipo de identificación y su número; informar un RUC no reemplaza esa identificación.",
+      "En Tipo de operación elegí el código correspondiente: B2B, B2C, B2G o B2F. No cambies el tipo solo para evitar un aviso: debe coincidir con la operación.",
+      "Informá el país que corresponda y revisá su compatibilidad con el receptor y el tipo de operación. Una operación local y una operación al exterior no se completan de la misma manera.",
+      "Completá nombre, dirección y ubicación cuando sean aplicables. No inventes códigos geográficos: utilizá los valores del catálogo de tu integración.",
+      "Cuando una selección admita Otro y aparezca una descripción, escribí el detalle requerido respetando la longitud indicada. La descripción no sustituye el código seleccionado.",
+      "Los campos opcionales sin contenido pueden omitirse al prepararlos desde el formulario. Si escribís null o propiedades adicionales directamente en el JSON, revisalas antes de enviar: editar libremente no implica que tu API las admita."
+    ],
+    "resultado": "La identificación y los campos condicionales corresponden al caso seleccionado.",
+    "avisos": [
+      "Con iNatRec igual a 2 e iTipIDRec igual a 1, un dNumIDRec vacío puede producir un error de identificación. Corregí el dato real; no lo copies automáticamente desde otro campo.",
+      "Las opciones Innominado y exterior tienen condiciones específicas. Leé la ayuda del campo y los resultados de Revisar."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Ayuda: icono de interrogación",
+        "funcion": "Muestra el motivo y un ejemplo de formato del campo.",
+        "uso": "Pulsá el icono junto al dato que no entendés.",
+        "resultado": "Aparece una explicación local sin salir del formulario.",
+        "detalle": "La ayuda corresponde a las reglas disponibles; no realiza una consulta de inteligencia artificial."
+      },
+      {
+        "nombre": "Ver campos opcionales",
+        "funcion": "Alterna la visualización de campos opcionales vacíos.",
+        "uso": "Marcala si necesitás completar un dato adicional aplicable.",
+        "resultado": "Muestra más campos; desmarcarla vuelve a ocultar los vacíos que no son requeridos.",
+        "detalle": "La casilla no completa valores ni obliga a informar todos los campos."
+      },
+      {
+        "nombre": "Selecciones de naturaleza, operación, identificación y Otros",
+        "funcion": "Guarda el código elegido y ajusta las condiciones del formulario.",
+        "uso": "Seleccioná según el receptor y la operación reales.",
+        "resultado": "El JSON recibe el código y se muestran las descripciones adicionales cuando correspondan.",
+        "detalle": "Cambiar una selección puede quitar datos incompatibles. Revisá el JSON después de cambiarla."
+      }
+    ]
+  },
+  {
+    "id": "productos",
+    "imagen": "capturas/campos.png",
+    "zonas": [
+      {
+        "x": 2,
+        "y": 2,
+        "w": 96,
+        "h": 27,
+        "t": "Pestañas y campos opcionales"
+      },
+      {
+        "x": 2,
+        "y": 42,
+        "w": 96,
+        "h": 47,
+        "t": "Datos generales y numeración"
+      }
+    ],
+    "titulo": "Productos, pagos e importes",
+    "objetivo": "Completar los ítems y las condiciones de pago sin confundir códigos, cantidades o importes.",
+    "pasos": [
+      "En el grupo de productos usá Añadir producto para crear otra fila. Completá cada ítem por separado: código, descripción, unidad, cantidad y los importes que correspondan al tipo de registro.",
+      "Una unidad de medida es un código del catálogo. Elegí su opción y comprobá que describa la unidad real del producto. Conservá los códigos que tengan ceros iniciales.",
+      "Informá la afectación y la tasa de IVA aplicables. Exento y exonerado son opciones distintas; no agregues IVA gravado a un ítem que no lo lleva.",
+      "En la condición de operación elegí contado o crédito. En contado completá los pagos; en crédito revisá el plazo o las cuotas según la opción seleccionada.",
+      "En tipo de pago elegí efectivo, cheque, tarjeta u otra opción del catálogo. Cheque habilita el número y el banco; tarjeta habilita los datos de marca y procesamiento aplicables.",
+      "Si elegís Otro para el tipo de pago o la tarjeta, completá la descripción adicional cuando aparezca. No rellenes datos de cheque si el pago es en efectivo.",
+      "Revisá el JSON y comprobá cantidades, precios, pagos e importes. La edición del JSON general no garantiza un recálculo automático. Para una nota convertida desde XML utilizá Recalcular importes dentro del conversor."
+    ],
+    "resultado": "Cada producto y pago conserva sus propios datos; el JSON muestra la solicitud que prepararás.",
+    "avisos": [
+      "No uses separadores de miles dentro de valores numéricos. Conservá la forma y la precisión admitidas por cada campo.",
+      "Un formulario completo no sustituye la revisión de los cálculos y la respuesta de tu API."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Añadir producto",
+        "funcion": "Agrega una fila nueva al grupo de productos.",
+        "uso": "Pulsalo para cargar otro producto sin reemplazar el anterior.",
+        "resultado": "Aparece una fila con los campos de la plantilla del tipo activo.",
+        "detalle": "Completá sus valores y revisá importes; añadir una fila no realiza una emisión."
+      },
+      {
+        "nombre": "Eliminar producto",
+        "funcion": "Quita del JSON la fila de producto indicada.",
+        "uso": "Pulsalo solo en el producto que quieras retirar.",
+        "resultado": "Desaparece esa fila y sus datos.",
+        "detalle": "No pide confirmación individual. Revisá después los totales y pagos relacionados."
+      },
+      {
+        "nombre": "Añadir registro",
+        "funcion": "Agrega una fila a un grupo repetible distinto de productos.",
+        "uso": "Usalo para otro pago, cuota o asociación cuando el formulario muestre ese grupo.",
+        "resultado": "Se incorpora una fila basada en la plantilla del grupo.",
+        "detalle": "No significa enviar ni registrar en el servicio; es una fila dentro del JSON."
+      },
+      {
+        "nombre": "Eliminar registro",
+        "funcion": "Quita la fila correspondiente de un grupo repetible.",
+        "uso": "Usalo para retirar un pago, cuota o asociación que no corresponde.",
+        "resultado": "Se elimina esa fila del borrador.",
+        "detalle": "La acción no cancela una operación previamente enviada ni recalcula por sí sola todos los importes."
+      },
+      {
+        "nombre": "Selección de tipo de pago, tarjeta y afectación",
+        "funcion": "Guarda el código de la opción elegida.",
+        "uso": "Elegí la opción real para mostrar sus campos aplicables.",
+        "resultado": "Cheque permite sus datos; tarjeta sus datos de procesamiento; Otro permite su descripción cuando corresponda.",
+        "detalle": "Los datos incompatibles pueden retirarse al cambiar de opción. Comprobá también el JSON y la revisión."
+      }
+    ]
+  },
+  {
+    "id": "personalizada",
+    "imagen": "capturas/envio.png",
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "titulo": "Solicitud personalizada y edición",
+    "objetivo": "Revisar o adaptar un JSON recibido sin depender de una plantilla.",
+    "pasos": [
+      "En Envío de datos elegí Solicitud personalizada. Pegá el JSON en Editar JSON; podés añadir, modificar o quitar propiedades.",
+      "Si el contenido incluye un registro de error después del JSON, utilizá Ordenar JSON para separarlo antes de trabajar con el formulario.",
+      "Abrí Completar campos para ver las propiedades del JSON válido. Los objetos anidados y las listas se muestran con sus campos; los ítems existentes se conservan.",
+      "Podés editar las filas de las listas, añadir o quitar ítems. Si necesitás una propiedad que todavía no aparece, añadila en Editar JSON y volvé al formulario.",
+      "Usá Buscar para localizar un campo o un valor en el editor. Escribí el texto de reemplazo y pulsá En todos si querés reemplazar todas sus coincidencias.",
+      "El reemplazo es textual: puede modificar claves y valores. Comprobá el resultado y volvé a Revisar para detectar una sintaxis inválida o campos afectados.",
+      "POST es el método predeterminado. GET está disponible en solicitudes personalizadas y no envía el cuerpo JSON; si tu servicio espera parámetros en la dirección, incorporalos en la URL según su contrato.",
+      "Antes de enviar una solicitud personalizada, comprobá por tu cuenta la dirección, el método y la revisión. Este modo utiliza directamente el JSON ingresado y no aplica la confirmación de emisión de las plantillas."
+    ],
+    "resultado": "El JSON personalizado se refleja en el formulario y permanece editable.",
+    "avisos": [
+      "Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Para otros contratos solo se pueden comprobar las reglas disponibles.",
+      "Las propiedades de una integración pueden ser diferentes de las de otra: no las renombres únicamente para hacer desaparecer un aviso."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Buscar",
+        "funcion": "Localiza una coincidencia del texto ingresado en el editor.",
+        "uso": "Escribí un campo o valor y pulsá Buscar, o Enter en el buscador.",
+        "resultado": "Selecciona la coincidencia siguiente y desplaza el editor hacia ella; al llegar al final vuelve al inicio.",
+        "detalle": "La búsqueda ignora mayúsculas y minúsculas. Si no encuentra el texto, muestra un aviso."
+      },
+      {
+        "nombre": "En todos",
+        "funcion": "Reemplaza todas las apariciones exactas del texto de búsqueda.",
+        "uso": "Completá Buscar y Reemplazar por antes de pulsarlo.",
+        "resultado": "Actualiza el texto completo del editor. Un reemplazo vacío elimina las coincidencias.",
+        "detalle": "El reemplazo distingue mayúsculas y minúsculas; puede cambiar nombres de claves y valores. Volvé a revisar el JSON."
+      },
+      {
+        "nombre": "Añadir ítem",
+        "funcion": "Agrega una fila a una lista del JSON personalizado.",
+        "uso": "Pulsalo al final del grupo donde necesitás otra fila.",
+        "resultado": "Si hay una fila, toma su estructura y vacía valores; si la lista está vacía, añade un objeto vacío.",
+        "detalle": "Para dar campos a un objeto vacío, editá el JSON. No agrega una plantilla fiscal automáticamente."
+      },
+      {
+        "nombre": "Eliminar ítem",
+        "funcion": "Retira la fila elegida de una lista personalizada.",
+        "uso": "Pulsalo en el ítem que querés quitar.",
+        "resultado": "Se actualiza la lista en el JSON.",
+        "detalle": "No tiene confirmación ni deshacer automático; verificá que quitaste la fila correcta."
+      },
+      {
+        "nombre": "Verdadero / Falso y selecciones de catálogo",
+        "funcion": "Edita valores booleanos o códigos existentes del JSON.",
+        "uso": "Elegí el valor apropiado en cada lista.",
+        "resultado": "Verdadero/Falso mantiene un booleano; el catálogo modifica el valor del campo correspondiente.",
+        "detalle": "Un valor personalizado fuera del catálogo puede mostrarse como valor del JSON: verificá si tu API lo admite."
+      }
+    ]
+  },
+  {
+    "id": "ordenar",
+    "imagen": "capturas/envio.png",
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "titulo": "Ordenar JSON y registros de error",
+    "objetivo": "Leer un JSON compacto y relacionar los errores de una respuesta con sus campos.",
+    "pasos": [
+      "Pegá el JSON de la solicitud, aunque esté en una sola línea. Pulsá Ordenar JSON: agrega sangría y saltos de línea, conservando claves, valores y el orden original.",
+      "También se admite el JSON seguido de un registro con fecha y nivel DEBUG, ERROR, INFO, WARNING o WARN. La solicitud debe ir primero y estar completa.",
+      "El JSON formateado queda en el editor. El registro se conserva separado en Ver registro separado; no forma parte del cuerpo que se enviará.",
+      "Debajo se muestra Resultado de la última ordenación. Los mensajes de la API aparecen con el campo informado, por ejemplo dNumIDRec, y las observaciones de las reglas disponibles.",
+      "Una clave no reconocida se señala con su ruta, incluyendo el ítem correspondiente. El aviso no la elimina: confirmá si pertenece al contrato de tu API.",
+      "Si aparece un carácter dañado, como el carácter de reemplazo Unicode, corregí el texto desde su origen. Ordenar no recupera letras que se perdieron al copiar o exportar.",
+      "Corregí los valores y volvé a ordenar o revisar. El resultado de la última ordenación describe el contenido de ese momento; podés minimizarlo o cerrarlo."
+    ],
+    "resultado": "El cuerpo queda legible y la respuesta adjunta se consulta por separado.",
+    "avisos": [
+      "No se corrigen automáticamente nombres como FormaPago, ni se eliminan campos como fk_fac. Un nombre no reconocido requiere revisión del contrato.",
+      "Si hay texto adicional sin un registro reconocido, o faltan llaves o comillas, se informa el problema y se conserva el texto original del editor."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Ordenar JSON",
+        "funcion": "Da sangría al JSON conservando sus literales y separa un registro adjunto reconocido.",
+        "uso": "Pegá la solicitud completa, sola o antes de un registro con fecha y nivel admitido.",
+        "resultado": "Deja solo la solicitud en el editor y muestra avisos y el registro separado debajo.",
+        "detalle": "No cambia el orden de claves, no corrige nombres ni elimina propiedades desconocidas."
+      },
+      {
+        "nombre": "Resultado de la última ordenación",
+        "funcion": "Despliega o minimiza el resultado de ordenar.",
+        "uso": "Pulsá el título de ese panel para alternar su presentación.",
+        "resultado": "Muestra u oculta los avisos sin cambiar el JSON.",
+        "detalle": "El resultado corresponde al momento de ordenar. Volvé a ejecutarlo después de editar."
+      },
+      {
+        "nombre": "Ver registro separado",
+        "funcion": "Despliega el registro retirado del cuerpo al ordenar.",
+        "uso": "Pulsalo si necesitás leer el error completo que copiaste.",
+        "resultado": "Muestra el texto del registro y permite cerrarlo pulsando de nuevo.",
+        "detalle": "Es una referencia de la respuesta anterior: no es una consulta nueva a la API."
+      },
+      {
+        "nombre": "Cerrar revisión",
+        "funcion": "Retira el panel del resultado de ordenar.",
+        "uso": "Pulsalo cuando ya leíste los avisos y no necesitás el registro en pantalla.",
+        "resultado": "Oculta el resultado y su registro separado.",
+        "detalle": "No restaura el registro dentro del editor. Guardá una copia si necesitás conservarlo."
+      }
+    ]
+  },
+  {
+    "id": "archivos",
+    "titulo": "Importar, copiar y exportar",
+    "imagen": "capturas/envio.png",
+    "pasos": [
+      "Utilizá Importar archivo y seleccioná JSON, TXT con JSON o XML, XML o Excel .xlsx. El archivo debe pesar menos de 10 MB. No se admite .xls.",
+      "Una vez cargado, verificá el tipo de registro y compará el JSON con el archivo original. Los campos importados no deben darse por correctos solo porque el archivo pudo leerse.",
+      "Un XML puede usar grupos y nombres diferentes de los que espera tu API. Revisá la conversión antes de enviar; importar no realiza una emisión.",
+      "Para Excel, utilizá la estructura exportada por KuatiaPost: Cabecera y hojas de grupos, como Detalles o Pagos, con el respaldo JSON. No es un importador de cualquier planilla comercial.",
+      "Editá datos simples sin incorporar fórmulas o celdas de fecha como sustituto de los textos esperados. Los códigos y sus ceros iniciales deben conservarse.",
+      "Copiar lleva el JSON al portapapeles. JSON y TXT descargan una copia del cuerpo; Excel exporta un registro con sus grupos. No se trabaja con una exportación masiva desde este apartado.",
+      "XML descarga el formato de intercambio de KuatiaPost para recuperar los datos posteriormente. No constituye un XML firmado ni reemplaza el archivo producido por tu integración.",
+      "Antes de compartir un archivo, abrilo y comprobá qué datos contiene. La descarga permanece en tu equipo aunque cierres la sesión."
+    ],
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "objetivo": "Cargar un registro y guardar una copia para continuar o compartirlo.",
+    "resultado": "Obtenés una copia del registro o un JSON importado que podés revisar y editar.",
+    "avisos": [
+      "Un archivo con extensión correcta puede contener una estructura incompatible. Leé el mensaje de importación y comprobá su contenido.",
+      "Exportar o copiar no verifica la aprobación del registro."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Importar archivo",
+        "funcion": "Abre el selector de archivos y carga el archivo elegido.",
+        "uso": "Seleccioná JSON, TXT, XML o Excel .xlsx con la estructura compatible y tamaño admitido.",
+        "resultado": "Reemplaza el cuerpo actual con los datos importados, elige un tipo reconocido y activa emisión.",
+        "detalle": "Importar reemplaza el borrador visible sin confirmación. Guardá antes una copia si necesitás conservarlo."
+      },
+      {
+        "nombre": "Copiar en el editor principal",
+        "funcion": "Copia el texto actual del cuerpo al portapapeles.",
+        "uso": "Usalo para pegarlo en otra herramienta o compartir una copia revisada.",
+        "resultado": "Muestra un aviso si la copia se completó.",
+        "detalle": "Copia exactamente el texto, incluso si tiene sintaxis inválida. El navegador puede impedir el acceso al portapapeles."
+      },
+      {
+        "nombre": "JSON en el editor principal",
+        "funcion": "Descarga el cuerpo interpretado como archivo .json.",
+        "uso": "Usalo para guardar una copia estructurada cuando el JSON es válido.",
+        "resultado": "Aplica la preparación de campos opcionales y guarda el archivo.",
+        "detalle": "Puede omitir o ajustar campos según las reglas de preparación; compará el archivo si necesitás la copia literal del editor."
+      },
+      {
+        "nombre": "TXT en el editor principal",
+        "funcion": "Descarga una representación formateada del cuerpo como texto.",
+        "uso": "Usalo cuando necesites un archivo .txt con contenido JSON.",
+        "resultado": "Guarda el cuerpo interpretado con sangría.",
+        "detalle": "Requiere un objeto JSON válido; no es una descarga literal de cualquier texto pegado."
+      },
+      {
+        "nombre": "XML en el editor principal",
+        "funcion": "Exporta el cuerpo como XML de intercambio de KuatiaPost.",
+        "uso": "Usalo para guardar datos que luego quieras recuperar con el importador.",
+        "resultado": "Descarga un archivo .xml con el formato propio de intercambio.",
+        "detalle": "No firma, no emite y no genera el XML final de tu servicio."
+      },
+      {
+        "nombre": "Excel en el editor principal",
+        "funcion": "Exporta un registro y, si existe, la respuesta actual a .xlsx.",
+        "uso": "Usalo para revisar o guardar la información en hojas de cálculo.",
+        "resultado": "Genera las hojas del formato de KuatiaPost con los grupos y su respaldo JSON.",
+        "detalle": "Requiere JSON válido y prepara los campos opcionales; la respuesta incluida puede pertenecer a una solicitud anterior si aún no enviaste el borrador actual."
+      },
+      {
+        "nombre": "Crear NC desde XML",
+        "funcion": "Abre el conversor de factura a nota de crédito.",
+        "uso": "Pulsalo cuando la factura de origen esté disponible en XML.",
+        "resultado": "Se muestra el diálogo de conversión sobre el área de envío.",
+        "detalle": "Abrir el conversor no importa automáticamente un archivo ni envía una nota."
+      },
+      {
+        "nombre": "Restablecer plantilla",
+        "funcion": "Sustituye el cuerpo actual por la plantilla del tipo activo.",
+        "uso": "Usalo para empezar ese registro nuevamente.",
+        "resultado": "Pide confirmación; al aceptar restaura la plantilla y limpia los errores de revisión.",
+        "detalle": "Se pierden los campos editados del cuerpo visible. En personalizada también utiliza la plantilla del tipo activo, no un objeto vacío."
+      },
+      {
+        "nombre": "Aceptar / Cancelar al restablecer",
+        "funcion": "Confirma o evita reemplazar el borrador.",
+        "uso": "Leé la pregunta del navegador antes de responder.",
+        "resultado": "Aceptar restaura la plantilla; Cancelar mantiene el JSON actual.",
+        "detalle": "No borra el token ni revoca una operación enviada."
+      }
+    ]
+  },
+  {
+    "id": "consulta",
+    "titulo": "Consultar estado y KUDE",
+    "imagen": "capturas/consulta.png",
+    "pasos": [
+      "Abrí Consulta y KUDE. Elegí el tipo: Factura, Nota de crédito, Nota de débito, Remisión o Autofactura.",
+      "Completá establecimiento y punto de expedición con tres dígitos y número con siete. Los cambios se reflejan inmediatamente en la solicitud correspondiente.",
+      "Comprobá la URL de consulta y el token compartido. Si el servicio del KUDE es diferente, configurá su URL por separado.",
+      "Consultá el estado y leé el valor informado por la integración. Un HTTP 200 o un status de éxito indican que hubo respuesta, pero no sustituyen el estado de aprobación.",
+      "Podés editar el JSON de consulta y el del KUDE por separado. Al cambiar sus campos desde el formulario, comprobá nuevamente el JSON resultante.",
+      "Pulsá Visualizar KUDE. El servicio debe devolver el PDF en base64 dentro de la propiedad kude, directamente o dentro de message.",
+      "Cuando el PDF sea válido, utilizá el visor para revisar su contenido y el botón de descarga para guardarlo. La solicitud no utiliza formato ticket."
+    ],
+    "zonas": [
+      {
+        "x": 1,
+        "y": 3,
+        "w": 97,
+        "h": 16,
+        "t": "Tipo y numeración para consultar"
+      },
+      {
+        "x": 1,
+        "y": 20,
+        "w": 97,
+        "h": 31,
+        "t": "Consultar estado, visualizar KUDE y token"
+      },
+      {
+        "x": 1,
+        "y": 53,
+        "w": 97,
+        "h": 43,
+        "t": "JSON independiente de consulta y KUDE"
+      }
+    ],
+    "objetivo": "Consultar un registro existente y obtener su representación en PDF.",
+    "resultado": "Se muestra el estado recibido y, si está disponible, el PDF del KUDE.",
+    "avisos": [
+      "Si no se encuentra el registro, revisá tipo, numeración y ambiente de la URL. No presupongas que el registro está rechazado solo porque no se pudo consultar.",
+      "Si el servicio devuelve texto, una URL o un archivo distinto de PDF, no se podrá mostrar como KUDE."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Tipo de operación de la consulta",
+        "funcion": "Selecciona el tipo del registro que vas a buscar.",
+        "uso": "Elegí Factura, Nota de crédito, Nota de débito, Remisión o Autofactura.",
+        "resultado": "Actualiza las solicitudes de consulta y KUDE con el código correspondiente.",
+        "detalle": "Comprobá la numeración y el JSON si previamente los editaste manualmente."
+      },
+      {
+        "nombre": "Consultar estado",
+        "funcion": "Envía la solicitud de estado por POST con el token compartido.",
+        "uso": "Completá tipo, numeración y URL; pulsá para consultar.",
+        "resultado": "Actualiza el resultado recibido; una nueva consulta sustituye la respuesta visible y retira el visor anterior.",
+        "detalle": "Consultar no emite ni cancela. Leé el estado retornado, además del HTTP."
+      },
+      {
+        "nombre": "Visualizar KUDE",
+        "funcion": "Solicita el PDF en base64 a la URL configurada.",
+        "uso": "Pulsalo cuando necesites ver la representación del registro.",
+        "resultado": "Si el servicio devuelve un PDF válido, se abre el visor y aparecen sus acciones de descarga.",
+        "detalle": "Un error o un base64 inválido no se transforma en un PDF. La consulta no modifica el registro externo."
+      },
+      {
+        "nombre": "Ojo del token compartido",
+        "funcion": "Muestra u oculta el token del campo de consulta.",
+        "uso": "Usalo para comprobar el valor antes de consultar.",
+        "resultado": "Alterna su visibilidad sin cambiarlo.",
+        "detalle": "Editar el valor cambia el token compartido con el resto de la sesión."
+      },
+      {
+        "nombre": "Ver respuesta",
+        "funcion": "Despliega la respuesta JSON cuando no hay estado reconocido ni PDF.",
+        "uso": "Usalo para leer el mensaje devuelto por la integración.",
+        "resultado": "Muestra o minimiza el cuerpo recibido.",
+        "detalle": "Es una respuesta ya recibida, no vuelve a consultar al abrirla."
+      },
+      {
+        "nombre": "Descargar PDF del KUDE",
+        "funcion": "Guarda el PDF recibido por la consulta.",
+        "uso": "Pulsalo después de verificar el contenido del visor.",
+        "resultado": "El navegador descarga el KUDE a tu equipo.",
+        "detalle": "Solo aparece con un PDF válido. El archivo permanece aunque cierres la sesión."
+      },
+      {
+        "nombre": "Abrir PDF",
+        "funcion": "Abre el KUDE recibido en otra pestaña.",
+        "uso": "Usalo para verlo con los controles del lector de PDF del navegador.",
+        "resultado": "Muestra el mismo archivo recibido con mayor espacio.",
+        "detalle": "No hace una nueva solicitud al servicio. El visor del navegador puede ofrecer zoom, impresión y descarga propios."
+      }
+    ]
+  },
+  {
+    "id": "nota",
+    "titulo": "Nota de crédito desde XML",
+    "imagen": "capturas/nota-parcial.png",
+    "pasos": [
+      "En Envío de datos abrí Crear NC desde XML. Seleccioná el archivo de la factura de origen o pegá su XML completo.",
+      "Completá el establecimiento, punto de expedición y número de la nueva nota. Estos datos no se heredan como valores predeterminados de la factura.",
+      "Elegí el Motivo de emisión en la lista. El código elegido se refleja en iMotEmi dentro del JSON generado.",
+      "Para trabajar con una parte, activá Seleccionar ítems para una NC parcial. Escribí los códigos separados por punto y coma; vacío significa todos los códigos disponibles.",
+      "Por cantidad: informá las cantidades en el orden de los códigos seleccionados, separadas por punto y coma. Se utiliza el precio original para calcular los importes correspondientes.",
+      "Por monto: ingresá un monto total o los montos por código según la selección. Se conserva la cantidad seleccionada y se recalcula el precio unitario para representar el importe; un monto total se distribuye entre los ítems seleccionados.",
+      "Revisá el JSON de la nota: podés editarlo directamente, copiarlo o descargarlo en JSON o TXT. Si cambiás cantidades o precios dentro de ese JSON, pulsá Recalcular importes para actualizar sus totales.",
+      "Pulsá Revisar JSON y corregí los avisos. Utilizá Usar nota de crédito en Envío de datos para trasladar el JSON visible al editor principal. Después comprobá URL, token y datos antes de enviarlo."
+    ],
+    "zonas": [
+      {
+        "x": 2,
+        "y": 7,
+        "w": 96,
+        "h": 19,
+        "t": "Cargar o pegar el XML de origen"
+      },
+      {
+        "x": 2,
+        "y": 27,
+        "w": 96,
+        "h": 15,
+        "t": "Numeración, fecha y motivo"
+      },
+      {
+        "x": 2,
+        "y": 43,
+        "w": 96,
+        "h": 13,
+        "t": "Selección parcial: códigos, cantidades y montos"
+      },
+      {
+        "x": 2,
+        "y": 57,
+        "w": 96,
+        "h": 41,
+        "t": "JSON editable, cálculos y traslado a envío"
+      }
+    ],
+    "objetivo": "Generar una nota completa o parcial y revisar el JSON antes de utilizarlo.",
+    "resultado": "La nota queda preparada en el editor principal. Convertir o trasladar el JSON no la envía.",
+    "avisos": [
+      "Cambiar el XML o los controles de conversión vuelve a generar el JSON: puede reemplazar las modificaciones manuales del conversor.",
+      "No se permiten cantidades o montos superiores a los disponibles. La precisión de los cálculos puede impedir representar ciertos importes.",
+      "Recalcular importes no admite descuentos o anticipos distintos de cero en esta conversión. Revisá esos casos antes de utilizarla."
+    ],
+    "imagenesAdicionales": [
+      {
+        "imagen": "capturas/nota-completa.png",
+        "titulo": "Nota completa: selección parcial desactivada"
+      }
+    ],
+    "controles": [
+      {
+        "nombre": "Cerrar conversor: X",
+        "funcion": "Cierra el diálogo de la nota de crédito.",
+        "uso": "Pulsalo para volver al área de envío sin trasladar el resultado.",
+        "resultado": "El diálogo desaparece; no envía ni copia la nota al editor principal.",
+        "detalle": "XML y controles permanecen en la sesión; las ediciones manuales locales del JSON del conversor no se conservan al cerrar y volver a abrir. Copialas o descargalas antes."
+      },
+      {
+        "nombre": "Cargar XML de factura",
+        "funcion": "Abre el selector del XML de origen.",
+        "uso": "Seleccioná la factura que querés usar como referencia.",
+        "resultado": "El conversor carga el texto y trata de generar la nota a partir del XML y los controles actuales.",
+        "detalle": "Reemplazar el archivo vuelve a generar el JSON. Revisá que sea la factura correcta."
+      },
+      {
+        "nombre": "Motivo de emisión",
+        "funcion": "Selecciona el código iMotEmi de la nota.",
+        "uso": "Elegí el motivo real en la lista; no escribas su número de memoria.",
+        "resultado": "Actualiza el código dentro del resultado generado.",
+        "detalle": "Cambiar el motivo regenera la nota y puede sustituir las modificaciones manuales hechas en su JSON."
+      },
+      {
+        "nombre": "Seleccionar ítems para una NC parcial",
+        "funcion": "Activa o desactiva los controles de selección parcial.",
+        "uso": "Marcala para indicar códigos, cantidades o montos; desmarcala para la conversión completa.",
+        "resultado": "Muestra u oculta esos controles y vuelve a generar el resultado.",
+        "detalle": "Los límites y cálculos dependen del origen. Revisá el resultado después de cambiar esta casilla."
+      },
+      {
+        "nombre": "Copiar en el conversor",
+        "funcion": "Copia el JSON visible de la nota al portapapeles.",
+        "uso": "Usalo para conservar o compartir una copia antes de cambiar los controles.",
+        "resultado": "Copia el texto que editaste en ese diálogo.",
+        "detalle": "Solo se habilita con resultado disponible. Copiar no comprueba la sintaxis ni envía la nota."
+      },
+      {
+        "nombre": "JSON / TXT en el conversor",
+        "funcion": "Descarga la nota visible en formato .json o .txt.",
+        "uso": "Usalos para guardar el resultado fuera de la sesión.",
+        "resultado": "Interpreta el objeto JSON y descarga una representación formateada con la extensión elegida.",
+        "detalle": "Si la edición manual dejó una sintaxis inválida, muestra un error y no descarga el archivo."
+      },
+      {
+        "nombre": "Recalcular importes",
+        "funcion": "Actualiza los importes y totales a partir de las cantidades y precios del JSON visible.",
+        "uso": "Pulsalo después de editar cantidades o precios directamente en la nota.",
+        "resultado": "Sustituye los importes calculados y los subtotales en el resultado editable.",
+        "detalle": "No cambia automáticamente una cantidad para justificar un monto manual. No admite descuentos ni anticipos distintos de cero en esta conversión."
+      },
+      {
+        "nombre": "Revisar JSON",
+        "funcion": "Comprueba sintaxis y reglas disponibles de la nota de crédito.",
+        "uso": "Usalo después de completar o recalcular el resultado.",
+        "resultado": "Muestra debajo los puntos que requieren revisión, o informa que no detectó problemas.",
+        "detalle": "No envía, no aprueba ni corrige valores automáticamente. Revisá otra vez después de editar."
+      },
+      {
+        "nombre": "Usar nota de crédito en Envío de datos",
+        "funcion": "Traslada el JSON visible al editor principal.",
+        "uso": "Pulsalo cuando quieras continuar con el envío de la nota preparada.",
+        "resultado": "Activa el tipo Nota de crédito, el modo emisión y el área de envío; luego cierra el conversor.",
+        "detalle": "Requiere un objeto JSON válido con iTiDE igual a 5. No envía: todavía debes revisar y pulsar Enviar."
+      }
+    ]
+  },
+  {
+    "id": "respuesta",
+    "imagen": "capturas/envio.png",
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "titulo": "Revisión, respuestas y errores",
+    "objetivo": "Distinguir problemas de los datos, del acceso y de la conexión.",
+    "pasos": [
+      "Pulsá Revisar debajo del editor. Los campos faltantes y las observaciones aparecen en una lista que podés desplegar o minimizar.",
+      "Corregí cada campo señalado y revisá nuevamente. Si pegaste un JSON personalizado de emisión, el tipo iTiDE permite aplicar las reglas disponibles de ese tipo.",
+      "Después de enviar, revisá tanto el código HTTP como el contenido de Respuesta. El servicio puede devolver un mensaje de error aunque la conexión haya terminado correctamente.",
+      "Los mensajes asociados a un campo indican qué dato revisar. Un error de estructura, como una lista esperada, requiere comprobar el nombre y la forma del grupo en el contrato de la API.",
+      "Los errores de acceso pueden requerir generar otro token o verificar las credenciales. Los de conexión requieren comprobar URL, disponibilidad del servicio y permisos del navegador.",
+      "La solicitud puede interrumpirse si el servicio no responde en 45 segundos. No interpretes ese corte como una aprobación o un rechazo: consultá el estado antes de volver a emitir.",
+      "La respuesta puede minimizarse y desplegarse. Los avisos breves desaparecen después de unos segundos; los resultados de revisión permanecen mientras no se edite el cuerpo o se cierre su panel."
+    ],
+    "resultado": "Podés ubicar el origen del problema y decidir qué corregir antes de repetir una acción.",
+    "avisos": [
+      "Verde identifica una acción completada; amarillo una revisión pendiente; rojo un fallo. Leé siempre el texto para entender su alcance.",
+      "Si compartís un registro de error con soporte, retirale contraseñas y tokens antes de enviarlo."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Revisar en el editor principal",
+        "funcion": "Comprueba el JSON y las reglas implementadas del tipo reconocido.",
+        "uso": "Pulsalo antes de enviar o después de corregir un campo.",
+        "resultado": "Muestra debajo la lista de observaciones o el resultado sin problemas detectados.",
+        "detalle": "No consulta al servicio, no recalcula todos los importes y no garantiza la aceptación definitiva."
+      },
+      {
+        "nombre": "Título del resultado de Revisión",
+        "funcion": "Minimiza o despliega las observaciones de Revisar.",
+        "uso": "Pulsá la cabecera de la lista cuando necesites ganar espacio.",
+        "resultado": "Oculta o muestra los detalles sin cambiar el cuerpo.",
+        "detalle": "Editar el JSON limpia esa revisión; pulsá Revisar otra vez para actualizarla."
+      },
+      {
+        "nombre": "Minimizar / Desplegar en Respuesta del servicio",
+        "funcion": "Oculta o muestra el contenido de la respuesta del envío.",
+        "uso": "Usalo para trabajar con más espacio o volver a leer el resultado.",
+        "resultado": "Conserva la respuesta recibida aunque esté minimizada.",
+        "detalle": "No cierra la sesión, no cancela una solicitud ni elimina datos del servicio externo."
+      },
+      {
+        "nombre": "Cerrar mensaje: X",
+        "funcion": "Retira el aviso temporal visible.",
+        "uso": "Pulsalo después de leer su texto.",
+        "resultado": "Oculta ese aviso inmediatamente.",
+        "detalle": "No corrige el error ni quita los resultados de revisión. Los avisos también desaparecen solos después de unos segundos."
+      }
+    ]
+  },
+  {
+    "id": "oscuro",
+    "titulo": "Navegación, tema y sesión",
+    "imagen": "capturas/envio.png",
+    "pasos": [
+      "El menú permite ir a Envío de datos, Consulta y KUDE, Configuración y Manual de uso. Cambiar de apartado mantiene los datos de la sesión.",
+      "Los borradores de emisión se conservan por tipo; Solicitud personalizada mantiene su propio borrador. Al cambiar de tipo, comprobá el encabezado y el JSON activos.",
+      "El botón de luna arriba a la derecha activa el tema oscuro. El botón de sol vuelve al tema claro. Cambiar el tema no modifica los campos.",
+      "Los datos, credenciales, token y respuestas se conservan solo mientras esta sesión está abierta. Recargar o cerrar la pestaña inicia una sesión vacía; no se guardan durante 24 horas.",
+      "Cada pestaña mantiene su propia memoria. Los archivos que descargaste permanecen en tu equipo y el servicio externo puede conservar los datos enviados según su funcionamiento.",
+      "Al terminar, cerrá la pestaña. No dejes una sesión con credenciales visibles en un equipo compartido.",
+      "En Manual de uso elegí una sección del índice. Los números sobre la ilustración muestran las zonas explicadas; Descargar PDF guarda esta guía completa."
+    ],
+    "zonas": [
+      {
+        "x": 2,
+        "y": 20,
+        "w": 72,
+        "h": 10,
+        "t": "Operación, método, dirección y envío"
+      },
+      {
+        "x": 2,
+        "y": 32,
+        "w": 72,
+        "h": 41,
+        "t": "Editor JSON y búsqueda"
+      },
+      {
+        "x": 2,
+        "y": 74,
+        "w": 72,
+        "h": 7,
+        "t": "Ordenar, revisar, copiar y descargar"
+      },
+      {
+        "x": 2,
+        "y": 82,
+        "w": 96,
+        "h": 16,
+        "t": "Respuesta del servicio"
+      }
+    ],
+    "objetivo": "Trabajar entre apartados y comprender cuándo se conservan los datos.",
+    "resultado": "Podés navegar sin perder el borrador mientras no recargues o cierres.",
+    "avisos": [
+      "Las capturas muestran los controles visibles; no contienen credenciales reales.",
+      "El manual explica el uso del programa; no reemplaza el contrato de cada servicio externo."
+    ],
+    "imagenesAdicionales": [],
+    "controles": [
+      {
+        "nombre": "Logo de KuatiaPost",
+        "funcion": "Vuelve al área Envío de datos.",
+        "uso": "Pulsalo desde cualquier apartado para regresar al editor.",
+        "resultado": "Cambia la vista conservando la sesión.",
+        "detalle": "No recarga la página ni inicia un registro nuevo."
+      },
+      {
+        "nombre": "Envío de datos en el menú",
+        "funcion": "Abre el editor y las plantillas.",
+        "uso": "Usalo para preparar, revisar o enviar solicitudes.",
+        "resultado": "Muestra el borrador activo.",
+        "detalle": "Cambiar de apartado no borra lo que escribiste."
+      },
+      {
+        "nombre": "Consulta y KUDE en el menú",
+        "funcion": "Abre el formulario de consulta.",
+        "uso": "Usalo para verificar un registro existente y obtener su KUDE.",
+        "resultado": "Muestra las solicitudes de estado y PDF.",
+        "detalle": "Abrir el apartado no ejecuta la consulta; debes pulsar su acción."
+      },
+      {
+        "nombre": "Configuración en el menú",
+        "funcion": "Abre las direcciones y la autenticación.",
+        "uso": "Usalo para cambiar las URL, credenciales o token.",
+        "resultado": "Muestra los valores de esta sesión.",
+        "detalle": "Los cambios afectan las solicitudes posteriores. No se guardan al recargar o cerrar."
+      },
+      {
+        "nombre": "Manual de uso en el menú",
+        "funcion": "Abre esta guía.",
+        "uso": "Usalo cuando quieras conocer una función o un botón.",
+        "resultado": "Muestra el índice y la sección seleccionada del manual.",
+        "detalle": "No descarga el PDF automáticamente ni envía tus datos."
+      },
+      {
+        "nombre": "Luna / Sol",
+        "funcion": "Alterna entre modo oscuro y modo claro.",
+        "uso": "Pulsá la luna para activar el oscuro y el sol para volver al claro.",
+        "resultado": "Cambia los colores de la interfaz.",
+        "detalle": "No modifica el JSON ni el token. La sesión no persiste después de recargar."
+      }
+    ]
+  },
+  {
+    "id": "manual",
+    "titulo": "Cómo consultar y descargar esta guía",
+    "imagen": "capturas/manual.png",
+    "zonas": [
+      {
+        "x": 83,
+        "y": 25,
+        "w": 15,
+        "h": 43,
+        "t": "Descargar el manual completo en PDF"
+      }
+    ],
+    "imagenesAdicionales": [],
+    "objetivo": "Encontrar una explicación y guardar el manual completo.",
+    "pasos": [
+      "Abrí Manual de uso desde el menú.",
+      "Elegí la sección que querés consultar en el índice. Cada sección incluye pasos, resultados y avisos.",
+      "Pulsá un número sobre la captura para ver qué zona explica. Podés ampliar la captura cuando necesites leer un control pequeño.",
+      "Las vistas complementarias muestran otros estados de la misma pantalla, como el JSON de autenticación visible o una nota completa.",
+      "Pulsá Descargar PDF para guardar todas las secciones. El archivo no contiene los datos ni credenciales de tu sesión."
+    ],
+    "resultado": "Podés consultar la guía dentro de KuatiaPost o guardarla como PDF.",
+    "avisos": [
+      "Las capturas sirven como referencia de los controles. El índice y el contenido de esta entrega se actualizaron respecto de la versión fotografiada."
+    ],
+    "controles": [
+      {
+        "nombre": "Secciones numeradas del índice",
+        "funcion": "Selecciona la explicación de una tarea.",
+        "uso": "Pulsá el nombre de la sección que necesitás consultar.",
+        "resultado": "Actualiza captura, pasos, avisos y catálogo de controles; selecciona la primera zona de la captura.",
+        "detalle": "Es navegación del manual, no ejecuta acciones de la pantalla ilustrada."
+      },
+      {
+        "nombre": "Números sobre la captura",
+        "funcion": "Seleccionan una zona ilustrada.",
+        "uso": "Pulsá un recuadro numerado para conocer qué grupo de controles identifica.",
+        "resultado": "Actualiza la leyenda debajo de la imagen y resalta la zona.",
+        "detalle": "Los números no son los botones reales: no envían, no generan token y no modifican el JSON."
+      },
+      {
+        "nombre": "Ampliar captura",
+        "funcion": "Abre la imagen de referencia en otra pestaña.",
+        "uso": "Usalo si el texto o los controles de la captura son pequeños.",
+        "resultado": "Permite consultar la imagen a su tamaño original.",
+        "detalle": "Es una imagen, no una pantalla operativa. Podés usar el zoom del navegador."
+      },
+      {
+        "nombre": "Imagen complementaria",
+        "funcion": "Abre ampliada una captura adicional.",
+        "uso": "Pulsá la imagen bajo su título, como JSON de autenticación visible.",
+        "resultado": "Se muestra esa referencia en otra pestaña.",
+        "detalle": "No cambia el estado de Configuración ni del conversor."
+      },
+      {
+        "nombre": "Descargar PDF del manual",
+        "funcion": "Descarga el manual completo de KuatiaPost.",
+        "uso": "Pulsalo para consultar la guía fuera del sistema.",
+        "resultado": "Guarda el PDF con todas las secciones, capturas y explicaciones.",
+        "detalle": "No incluye tu borrador, respuestas, contraseña ni token; si el archivo no se puede cargar, muestra un mensaje."
+      }
+    ]
+  }
+]

@@ -2032,3 +2032,26 @@ html[data-tema="oscuro"] .nc-json-panel { border-color:#454d5b; }
 html[data-tema="oscuro"] .selector-motivo select { background:#20252d; color:#e3e8ef; border-color:#596170; }
 html[data-tema="oscuro"] .selector-motivo select:hover, html[data-tema="oscuro"] .selector-motivo select:focus-visible { border-color:#ff9f64; }
 html[data-tema="oscuro"] .motivo-nc .motivo-codigo { background:#3b2c22; color:#ffc098; }
+
+/* Explicaciones del manual: misma jerarquía en los dos temas. */
+.manual-objetivo { line-height:1.8; font-weight:600; }
+.manual-detalle { padding:18px; margin-top:18px; border:1px solid #dce3ec; border-radius:10px; }
+.manual-detalle p, .manual-detalle li { font-size:13px; line-height:1.8; }
+.manual-detalle li + li { margin-top:10px; }
+html[data-tema="oscuro"] .manual-detalle { border-color:#454d5b; background:#20252d; color:#dce4ef; }
+
+/* Capturas reales: tamaño natural adaptable y enlace para leerlas en detalle. */
+.manual-ampliar { display:inline-block; margin:0 0 20px; }
+.manual-captura-extra { margin:18px 0; padding:16px; border:1px solid #64748b; border-radius:10px; }
+.manual-captura-extra img { display:block; width:100%; max-width:740px; margin:14px auto; }
+.manual-captura-extra figcaption { font-weight:600; }
+.manual-captura-extra p { font-size:12px; }
+
+/* Catálogo por control: títulos visibles y explicaciones legibles en ambos temas. */
+.manual-catalogo { margin-top:30px; }
+.manual-control { border:1px solid #dce3ec; border-left:3px solid #ff7900; border-radius:10px; padding:20px; margin:16px 0; }
+.manual-control h4 { margin:0 0 16px; font-size:15px; }
+.manual-control dl { margin:0; }
+.manual-control dt { font-size:12px; font-weight:700; margin-top:12px; }
+.manual-control dd { margin:4px 0 0; font-size:13px; line-height:1.8; }
+html[data-tema="oscuro"] .manual-control { background:#20252d; border-color:#454d5b; border-left-color:#ff7900; color:#dce4ef; }

@@ -15,7 +15,6 @@ import {
   Copy,
   ChevronRight,
   ShieldCheck,
-  MessageSquare,
   RefreshCw,
   FileCode,
   ExternalLink,
@@ -65,12 +64,11 @@ import {
 } from "../../lib/integracion/consulta-kude";
 import GenerarNotaCredito from "../documentos/GenerarNotaCredito";
 
-type View = "workspace" | "consulta" | "assistant" | "settings" | "manual";
+type View = "workspace" | "consulta" | "settings" | "manual";
 /** Las pantallas describen tareas concretas; no hay login porque el acceso es público. */
 const navigation = [
   { id: "workspace", label: "Envío de datos", icon: Braces },
   { id: "consulta", label: "Consulta y KUDE", icon: Files },
-  { id: "assistant", label: "Asistente", icon: MessageSquare },
 ];
 
 /** Descarga un archivo generado localmente y libera la URL temporal. */
@@ -1015,13 +1013,6 @@ export default function EnvioDocumentos() {
               kudeUrl={kudeUrl} setKudeUrl={setKudeUrl}
               compartirKude={compartirKude} setCompartirKude={setCompartirKude}
             />
-          )}
-          {/* El asistente queda anunciado sin consultas ni solicitudes al proveedor. */}
-          {view === "assistant" && (
-            <section className="panel asistente-proximamente" role="status">
-              <h1>Asistente</h1>
-              <p>Próximamente habilitado en KuatiaPost.</p>
-            </section>
           )}
           {view === "consulta" && (
             <ConsultarDocumento
