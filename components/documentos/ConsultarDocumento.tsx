@@ -56,10 +56,10 @@ export default function ConsultarDocumento({
 
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading consulta-subtitulo">
         <div>
           <div className="eyebrow">DATOS EMITIDOS</div>
-          <h1>Consulta y KUDE</h1>
+          <h2>Consultas y KUDE</h2>
           <p>Buscá un registro por su numeración.</p>
         </div>
       </div>
