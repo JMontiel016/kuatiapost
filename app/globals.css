@@ -2138,3 +2138,46 @@ html[data-tema="oscuro"] .evento-errores {background:#3e2229;color:#ffd1d7;borde
 html[data-tema="oscuro"] .eventos-seccion .evento-field .evento-error-campo {color:#ffbec4;}
 @media(max-width:1050px) {.eventos-campos-compactos,.eventos-campos-nominacion.evento-grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:650px) {.eventos-campos-compactos,.eventos-campos-nominacion.evento-grid {grid-template-columns:1fr;}.eventos-formulario {padding:15px;}}
+
+
+/* Ajuste puntual: las tarjetas de eventos no deben desbordar ni quedar
+   cortadas en los extremos al cambiar el ancho disponible del panel. */
+.eventos-seccion {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+}
+.eventos-seccion .eventos-selector {
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.eventos-seccion .evento-tab,
+.eventos-seccion .evento-tab.elegido {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 70px;
+  border-radius: 9px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.eventos-seccion .evento-tab > span {
+  min-width: 0;
+  max-width: 100%;
+}
+.eventos-seccion .evento-tab small {
+  overflow-wrap: anywhere;
+}
+@container (max-width: 830px) {
+  .eventos-seccion .eventos-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 560px) {
+  .eventos-seccion .eventos-selector {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
