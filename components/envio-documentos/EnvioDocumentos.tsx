@@ -56,6 +56,7 @@ import {
 import ConfiguracionIntegracion from "../configuracion/ConfiguracionIntegracion";
 import ConsultaLlama from "../asistente/ConsultaLlama";
 import ConsultarDocumento from "../documentos/ConsultarDocumento";
+import EventosDocumento from "../documentos/EventosDocumento";
 import {
   crearConsulta,
   revisarConsulta,
@@ -68,7 +69,7 @@ type View = "workspace" | "consulta" | "settings" | "manual";
 /** Las pantallas describen tareas concretas; no hay login porque el acceso es público. */
 const navigation = [
   { id: "workspace", label: "Envío de datos", icon: Braces },
-  { id: "consulta", label: "Consulta y KUDE", icon: Files },
+  { id: "consulta", label: "Eventos / Consultas", icon: Files },
 ];
 
 /** Descarga un archivo generado localmente y libera la URL temporal. */
@@ -192,6 +193,9 @@ export default function EnvioDocumentos() {
   }
   const [resultadoConsulta, setResultadoConsulta] = useState<any>(null);
   const [pdfConsulta, setPdfConsulta] = useState<Blob | null>(null);
+  const [subVistaConsulta,setSubVistaConsulta]=useState<"eventos"|"consultas">("consultas");
+  const [confirmacionGlobal,setConfirmacionGlobal]=useState<{titulo:string;descripcion:string;aceptar:()=>void}|null>(null);
+  function confirmar(titulo:string,descripcion:string,aceptar:()=>void){setConfirmacionGlobal({titulo,descripcion,aceptar});}
   const borradores = useRef<Record<string, string>>({});
 
   // Pregunta, explicación y referencias del asistente.
@@ -343,7 +347,11 @@ export default function EnvioDocumentos() {
   }
 
   /** Revisa campos aplicables antes de confirmar y enviar el documento. */
-  async function sendRequest() {
+  async function sendRequest(confirmado = false) {
+    if (!confirmado && mode === "emit") {
+      confirmar("¿Confirmás el envío del documento?", `Se enviará ${selected.name.toLowerCase()} al servicio configurado. Revisá el JSON antes de continuar.`, () => { void sendRequest(true); });
+      return;
+    }
     await attempt(async () => {
       let data = parseObject(body);
       if (!token.trim())
@@ -355,12 +363,7 @@ export default function EnvioDocumentos() {
           setNotice("Completá los campos indicados antes de enviar.", "warning");
           return;
         }
-        if (
-          !window.confirm(
-            `Se enviará ${selected.name.toLowerCase()} a ${url}. ¿Confirmás el envío?`,
-          )
-        )
-          return;
+        // Confirmación realizada mediante diálogo antes de llamar a este método.
       }
       setBusy(true);
       try {
@@ -664,7 +667,7 @@ export default function EnvioDocumentos() {
                     <button
                       className="primary"
                       disabled={busy || !url}
-                      onClick={sendRequest}
+                      onClick={() => { void sendRequest(); }}
                     >
                       <Send size={16} />
                       {busy ? "Enviando…" : "Enviar"}
@@ -932,14 +935,7 @@ export default function EnvioDocumentos() {
                     <button
                       className="text-button reset"
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            "¿Vaciar los campos del registro actual?",
-                          )
-                        ) {
-                          setBody(pretty(template(type)));
-                          setErrors([]);
-                        }
+                        confirmar("¿Restablecer la plantilla?", "Se perderán los cambios del registro actual.", () => {setBody(pretty(template(type)));setErrors([]);});
                       }}
                     >
                       <RefreshCw size={14} />
@@ -1014,8 +1010,14 @@ export default function EnvioDocumentos() {
               compartirKude={compartirKude} setCompartirKude={setCompartirKude}
             />
           )}
-          {view === "consulta" && (
-            <ConsultarDocumento
+          {view === "consulta" && (<>
+             <div className="page-heading"><div><div className="eyebrow">DATOS EMITIDOS</div><h1>Eventos / Consultas</h1><p>Consultá estados y KUDE, o aplicá eventos a documentos electrónicos.</p></div></div>
+             <div className="eventos-vistas" role="tablist" aria-label="Eventos y consultas">
+               <button type="button" role="tab" aria-selected={subVistaConsulta==="consultas"} className={subVistaConsulta==="consultas"?"activo":""} onClick={()=>setSubVistaConsulta("consultas")}><Search size={16}/>Consultas y KUDE</button>
+               <button type="button" role="tab" aria-selected={subVistaConsulta==="eventos"} className={subVistaConsulta==="eventos"?"activo":""} onClick={()=>setSubVistaConsulta("eventos")}><Files size={16}/>Eventos</button>
+             </div>
+             {subVistaConsulta==="eventos" && <EventosDocumento url={url||consultaUrl} token={token} ocupado={busy} setOcupado={setBusy} avisar={setNotice} alRegistrar={(r:any)=>setRecords(v=>[r,...v])}/>}
+             {subVistaConsulta==="consultas" && <ConsultarDocumento
               token={token} setToken={setToken}
               consultaUrl={consultaUrl} setConsultaUrl={setConsultaUrl}
               kudeUrl={kudeUrl} setKudeUrl={setKudeUrl}
@@ -1029,8 +1031,8 @@ export default function EnvioDocumentos() {
               resultado={resultadoConsulta}
               pdf={pdfConsulta}
               alDescargar={save}
-            />
-          )}
+            />}
+          </>)}
         </div>
         <footer className="main-footer">
           <span>KuatiaPost</span>
@@ -1038,6 +1040,16 @@ export default function EnvioDocumentos() {
           <span>Datos de sesión · Sin almacenamiento permanente</span>
         </footer>
       </main>
+      {confirmacionGlobal && <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setConfirmacionGlobal(null)}}>
+        <div className="modal eventos-confirmacion" role="alertdialog" aria-modal="true" aria-labelledby="titulo-confirmacion-general">
+          <div className="eventos-icono-alerta"><AlertTriangle size={24}/></div>
+          <h2 id="titulo-confirmacion-general">{confirmacionGlobal.titulo}</h2><p>{confirmacionGlobal.descripcion}</p>
+          <div className="consulta-acciones eventos-botones">
+            <button type="button" autoFocus className="outline" onClick={()=>setConfirmacionGlobal(null)}>Volver</button>
+            <button type="button" className="primary" onClick={()=>{const acc=confirmacionGlobal.aceptar;setConfirmacionGlobal(null);acc();}}>Sí, confirmar</button>
+          </div>
+        </div>
+      </div>}
       {xmlOpen && (
         <GenerarNotaCredito
           setXmlOpen={setXmlOpen}
