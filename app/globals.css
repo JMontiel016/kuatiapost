@@ -2055,3 +2055,28 @@ html[data-tema="oscuro"] .manual-detalle { border-color:#454d5b; background:#202
 .manual-control dt { font-size:12px; font-weight:700; margin-top:12px; }
 .manual-control dd { margin:4px 0 0; font-size:13px; line-height:1.8; }
 html[data-tema="oscuro"] .manual-control { background:#20252d; border-color:#454d5b; border-left-color:#ff7900; color:#dce4ef; }
+
+/* Eventos / Consultas: navegación secundaria y formularios */
+.eventos-vistas{display:flex;gap:8px;margin:0 0 20px;border-bottom:1px solid #dce4ed;padding-bottom:12px;flex-wrap:wrap}
+.eventos-vistas button{display:inline-flex;gap:9px;align-items:center;padding:11px 17px;border:1px solid #d8e2ee;border-radius:8px;background:transparent;color:inherit;font-weight:650;cursor:pointer}
+.eventos-vistas button.activo{border-color:#ef741c;background:#fff1e7;color:#a74406}
+.consulta-subtitulo{margin-bottom:14px}.consulta-subtitulo h2{font-size:19px;margin:0}
+.eventos-selector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 20px}
+.evento-tab{display:flex;align-items:flex-start;gap:12px;text-align:left;background:var(--surface,#fff);border:1px solid #dbe3ec;color:inherit;border-radius:10px;padding:16px;cursor:pointer}
+.evento-tab.elegido{border:2px solid #f4771d;background:#fff4ec;padding:15px}
+.evento-tab svg{flex:none;color:#e97020}.evento-tab span{display:grid;gap:5px}.evento-tab small{font-size:12px;line-height:1.45;opacity:.77}
+.eventos-formulario{padding:24px}.eventos-encabezado{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:20px}
+.eventos-encabezado h2{font-size:23px;margin:5px 0 6px}.eventos-encabezado p{font-size:13px;margin:0}
+.eventos-campos{margin-bottom:20px}.eventos-campos-nominacion{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}
+.eventos-motivo{margin:20px 0}.eventos-motivo textarea,.eventos-json textarea{width:100%;border:1px solid #ccd6e4;border-radius:8px;padding:12px;background:transparent;color:inherit}
+.eventos-json textarea{font:12px/1.55 monospace;min-height:260px}.eventos-barra{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-top:20px;flex-wrap:wrap}
+.eventos-barra p{display:flex;align-items:center;gap:9px;font-size:12px;color:#8a5f22;margin:0;max-width:550px}
+.eventos-referencia{background:#f4f6f9;border:1px solid #d7e1ea;padding:16px;border-radius:8px;font-weight:750;font-size:20px;overflow-wrap:anywhere;margin:14px 0}
+.eventos-icono-alerta{display:inline-flex;background:#fff0d9;color:#a65b11;border-radius:12px;padding:12px;margin-bottom:10px}
+.eventos-confirmacion{max-width:540px}.eventos-confirmacion h2{font-size:23px}.eventos-atencion{color:#ae4b16;font-weight:600}
+.eventos-botones{justify-content:flex-end;margin-top:24px}.eventos-error{color:#a52a30}
+html[data-tema="oscuro"] .evento-tab,html[data-tema="oscuro"] .eventos-vistas button{background:#20252d;border-color:#455064;color:#e5ebf5}
+html[data-tema="oscuro"] .evento-tab.elegido,html[data-tema="oscuro"] .eventos-vistas button.activo{background:#3b2c22;border-color:#f4771d;color:#ffc29b}
+html[data-tema="oscuro"] .eventos-referencia{background:#222934;border-color:#455064}
+@media(max-width:850px){.eventos-selector{grid-template-columns:1fr}.eventos-campos-nominacion{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.eventos-formulario{padding:16px}.eventos-campos-nominacion{grid-template-columns:1fr}.eventos-encabezado{flex-wrap:wrap}.eventos-barra .primary{width:100%}}
