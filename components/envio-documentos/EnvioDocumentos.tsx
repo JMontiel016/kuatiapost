@@ -667,7 +667,7 @@ export default function EnvioDocumentos() {
                     <button
                       className="primary"
                       disabled={busy || !url}
-                      onClick={sendRequest}
+                      onClick={() => { void sendRequest(); }}
                     >
                       <Send size={16} />
                       {busy ? "Enviando…" : "Enviar"}
