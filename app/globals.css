@@ -2181,3 +2181,25 @@ html[data-tema="oscuro"] .eventos-seccion .evento-field .evento-error-campo {col
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Botones globales usan justify-content:center. En tarjetas de eventos,
+   eso centra el contenido y deja un espacio excesivo a la izquierda. */
+.eventos-seccion .eventos-selector .evento-tab {
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
+  padding: 11px 14px;
+}
+.eventos-seccion .eventos-selector .evento-tab.elegido {
+  padding: 10px 13px; /* Compensa borde activo de 2px */
+}
+.eventos-seccion .eventos-selector .evento-tab > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.eventos-seccion .eventos-selector .evento-tab > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
