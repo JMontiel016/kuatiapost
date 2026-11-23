@@ -1071,6 +1071,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
           setBody={setBody} setType={setType} setMode={setMode}
           setErrors={setErrors} setNotice={setNotice} setView={setView}
           sessionData={nrMasivaSession} onSessionChange={setNrMasivaSession}
+          setEditorTab={setEditorTab}
           oscuro={oscuro} onToggleTema={() => cambiarOscuro(!oscuro)}
         />
       )}

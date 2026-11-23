@@ -32,7 +32,7 @@ const tests = [
  ['Evento con motivo Otro editable', evento.includes('form.opcion==="otro"') && evento.includes('motivoManual')],
  ['Evento con prevención de reintentos inciertos', evento.includes('["aprobado","incierto"].includes(resultado.estado)')],
  ['Campos de cliente no emisor en NR', nr.includes('gDatRec (receptor/cliente)')],
- ['NR validar antes de utilizar JSON', nr.includes('verificarBorradorNR(doc')],
+ ['NR abre como borrador y ofrece validación explícita', nr.includes('crearBorradorNotaRemision(facturas') && nr.includes('setEditorTab("json")') && nr.includes('verificarBorradorNR(parseObject(jsonEditable)')],
 ];
 for(const [name, check] of tests) {assert(check, name); console.log('OK', name)}
 console.log('TOTAL',tests.length,'controles de integración verificados');

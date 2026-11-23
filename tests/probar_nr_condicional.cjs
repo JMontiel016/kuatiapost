@@ -13,7 +13,7 @@ for (const file of ['nota-remision-masiva','plantillas-documentos','catalogo-pai
 }
 
 const {
-  crearDatosNR, prepararNotaRemision, verificarBorradorNR,
+  crearDatosNR, crearBorradorNotaRemision, prepararNotaRemision, verificarBorradorNR,
   actualizarDatoNR, revisarCamposNR, catalogosNR
 }=require(path.join(testlib,'lib/documentos/nota-remision-masiva.js'));
 const cli={ iNatRec:'1', iTiOpe:'1', cPaisRec:'PRY', dNomRec:'COMERCIAL CLIENTE S.A.', dRucRec:'1234567', dDVRec:'2', dDirRec:'Av. Siempre Viva', dEmailRec:'cliente@ejemplo.com' };
@@ -33,6 +33,17 @@ const casos=[];
 function caso(n,fn) {try{fn();casos.push('OK '+n)}catch(e){console.error('FALLO '+n,e); process.exitCode=1}}
 function construir(e=d, sel={}) {return prepararNotaRemision([x,y],x.cdc,sel,e)}
 function falla(e,match){assert.throws(()=>construir(e),match)}
+caso('borrador parcial editable sin facturas y con datos incompletos',()=>{
+  const parcial = { ...crearDatosNR('2026-11-16T14:00:00'), salidaDireccion: 'Calle de prueba' };
+  const sinFacturas = crearBorradorNotaRemision([], '', {}, parcial);
+  assert.equal(sinFacturas.iTiDE, '7');
+  assert.equal(sinFacturas.Salida[0].dDirLocSal, 'Calle de prueba');
+  assert.deepEqual(sinFacturas.Detalles, []);
+  const conFactura = crearBorradorNotaRemision([x], x.cdc, {}, parcial);
+  assert.equal(conFactura.dNomRec, cli.dNomRec);
+  assert.equal(conFactura.Detalles[0].dCantProSer, '5');
+  assert.throws(() => prepararNotaRemision([x], x.cdc, {}, parcial), /campo/);
+});
 caso('NR válida con campos opcionales sin informar',()=>{
   const r=construir();assert.equal(r.iTiDE,'7');assert.equal(r.dNomRec,cli.dNomRec);
   assert.equal(r.dRucRec,cli.dRucRec);assert.notEqual(r.dRucRec,x.emisor.ruc);

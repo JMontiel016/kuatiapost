@@ -9,7 +9,7 @@ import {
   Trash2, Upload, X,
 } from "lucide-react";
 import {
-  analizarFactura, compararFacturas, claveLinea, prepararNotaRemision, verificarBorradorNR,
+  analizarFactura, compararFacturas, claveLinea, crearBorradorNotaRemision, prepararNotaRemision, verificarBorradorNR,
   revisarCamposNR, crearDatosNR, actualizarDatoNR, catalogosNR,
   type DatosNR, type FacturaOrigen, type LineaFactura, type SeleccionLineas,
 } from "../../lib/documentos/nota-remision-masiva";
@@ -26,6 +26,7 @@ interface Props {
   setErrors: (v: string[]) => void;
   setNotice: (v: string, tipo?: string) => void;
   setView: (v: "workspace") => void;
+  setEditorTab: (v: "json") => void;
   sessionData?: Record<string, any> | null;
   onSessionChange?: (datos: Record<string, any>) => void;
   oscuro?: boolean;
@@ -63,7 +64,7 @@ function descargar(nombre: string, texto: string, tipo: string) {
 }
 /** Selección masiva detallada. Los importes visualizados son referencia, no datos de la NR. */
 export default function GenerarNotaRemisionMasiva({
-  onClose, setBody, setType, setMode, setErrors, setNotice, setView, sessionData, onSessionChange,
+  onClose, setBody, setType, setMode, setErrors, setNotice, setView, setEditorTab, sessionData, onSessionChange,
 }: Props) {
   const archivosRef = useRef<HTMLInputElement>(null);
   const carpetaRef = useRef<HTMLInputElement>(null);
@@ -204,18 +205,24 @@ export default function GenerarNotaRemisionMasiva({
       if (fallos.length) { setErroresCampos(fallos); throw Error(`Revisá ${fallos.length} campo(s) del formulario antes de continuar.`); }
       await verificarLugares();
       const resultado = prepararNotaRemision(facturas, principalCDC, seleccion, datos);
-      setJsonEditable(pretty(resultado)); setMostrarJson(false);
+      if (jsonEditable.trim()) verificarBorradorNR(parseObject(jsonEditable), facturas, principalCDC, seleccion, datos);
+      if (!jsonEditable.trim()) setJsonEditable(pretty(resultado));
+      setMostrarJson(true);
       setMensaje("Borrador de NR preparado. Completá y revisá los datos de transporte, salida y entrega antes de emitir.");
     } catch (e) { setMensaje(e instanceof Error ? e.message : "No se pudo preparar la NR."); }
   }
-  async function usar() {
+  function usar() {
     try {
-      if (!jsonEditable) throw Error("Primero validá y prepará la NR.");
-      const doc = parseObject(jsonEditable);
-      await verificarLugares();
-      verificarBorradorNR(doc, facturas, principalCDC, seleccion, datos);
+      const doc = jsonEditable.trim()
+        ? parseObject(jsonEditable)
+        : crearBorradorNotaRemision(facturas, principalCDC, seleccion, datos);
+      if (doc.iTiDE != null && doc.iTiDE !== "" && String(doc.iTiDE) !== "7") {
+        throw Error("La nota de remisión debe tener iTiDE=7.");
+      }
+      if (doc.iTiDE == null || doc.iTiDE === "") doc.iTiDE = "7";
       setBody(pretty(doc)); setType("7"); setMode("emit"); setErrors([]); setView("workspace");
-      setNotice("NR consolidada cargada. Revisá los datos de transporte, salida y entrega antes de emitir.", "success");
+      setEditorTab("json");
+      setNotice("Borrador de NR abierto en el editor.", "success");
       onClose();
     } catch (e) { setMensaje(e instanceof Error ? e.message : "Revisá el borrador JSON."); }
   }
@@ -409,10 +416,10 @@ export default function GenerarNotaRemisionMasiva({
             </details>
           </section>
 
-          {jsonEditable && <section className="nr-section nr-result"><div className="nr-section-head"><div className="nr-heading"><span className="nr-heading-number nr-finish"><Check size={17}/></span><div><h3>Borrador de NR preparado</h3><p>Revisá antes de enviar a tu servicio emisor. No significa aprobación DNIT.</p></div></div><button type="button" className="nr-btn nr-btn-neutral" aria-expanded={mostrarJson} onClick={() => setMostrarJson(!mostrarJson)}><FileCode2 size={16}/>{mostrarJson ? "Ocultar JSON" : "Ver JSON"}<ChevronDown size={15} className={mostrarJson ? "nr-rotated" : ""}/></button></div>{mostrarJson && <div className="nr-json-content"><label htmlFor="nr-json">JSON de la NR</label><textarea id="nr-json" value={jsonEditable} spellCheck={false} onChange={e => setJsonEditable(e.target.value)}/><small>El cliente, el motivo y los subcampos condicionales se vuelven a comprobar antes de continuar.</small></div>}</section>}
+          {jsonEditable && <section className="nr-section nr-result"><div className="nr-section-head"><div className="nr-heading"><span className="nr-heading-number nr-finish"><Check size={17}/></span><div><h3>Borrador de NR preparado</h3><p>Revisá antes de enviar a tu servicio emisor. No significa aprobación DNIT.</p></div></div><button type="button" className="nr-btn nr-btn-neutral" aria-expanded={mostrarJson} onClick={() => setMostrarJson(!mostrarJson)}><FileCode2 size={16}/>{mostrarJson ? "Ocultar JSON" : "Ver JSON"}<ChevronDown size={15} className={mostrarJson ? "nr-rotated" : ""}/></button></div>{mostrarJson && <div className="nr-json-content"><label htmlFor="nr-json">JSON de la NR</label><textarea id="nr-json" value={jsonEditable} spellCheck={false} onChange={e => setJsonEditable(e.target.value)}/><small>Podés seguir editando este JSON después de abrir el borrador.</small></div>}</section>}
 
         </div>
-        <footer className="nr-footer"><div className="nr-footer-actions"><button type="button" className="nr-btn nr-btn-neutral" disabled={!seleccionadas} onClick={exportarCSV}><Download size={16}/> Exportar detalle</button><button type="button" className="nr-btn nr-btn-outline" disabled={!listo || cargando} onClick={preparar}><ShieldCheck size={17}/> Validar y preparar</button><button type="button" className="nr-btn nr-btn-main" disabled={!jsonEditable || hayProblemas} onClick={usar}>Usar NR en el editor <ArrowRight size={17}/></button></div></footer>
+        <footer className="nr-footer"><div className="nr-footer-actions"><button type="button" className="nr-btn nr-btn-neutral" disabled={!seleccionadas} onClick={exportarCSV}><Download size={16}/> Exportar detalle</button><button type="button" className="nr-btn nr-btn-outline" disabled={!listo || cargando} onClick={preparar}><ShieldCheck size={17}/> Validar y preparar</button><button type="button" className="nr-btn nr-btn-main" disabled={cargando || hayProblemas} onClick={usar}>Usar NR en el editor <ArrowRight size={17}/></button></div></footer>
       </section>
     </div>
   );

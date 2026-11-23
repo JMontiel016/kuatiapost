@@ -411,14 +411,27 @@ export function prepararNotaRemision(
   if (!facturas.length) throw Error("Importá al menos una factura válida.");
   const principal = facturas.find(f => f.cdc === principalCDC);
   if (!principal) throw Error("Elegí una factura principal válida.");
+  const errores = revisarCamposNR(input, principal);
+  if (errores.length) throw Error(`${errores.length} campo(s) para revisar: ${errores.join(" · ")}`);
+  const doc = crearBorradorNotaRemision(facturas, principalCDC, seleccion, input);
+  if (!(doc.Detalles as unknown[]).length) throw Error("Seleccioná al menos un ítem.");
+  return doc;
+}
+
+/** Construye una NR editable aunque todavía falten datos del formulario. */
+export function crearBorradorNotaRemision(
+  facturas: FacturaOrigen[], principalCDC: string, seleccion: SeleccionLineas,
+  input: DatosNR,
+): Record<string, unknown> {
+  const principal = facturas.find(f => f.cdc === principalCDC);
+  if (facturas.length && !principal) throw Error("Elegí una factura principal válida.");
   if (new Set(facturas.map(f => f.cdc)).size !== facturas.length) throw Error("Hay CDC duplicados en la importación.");
   for (const f of facturas) {
+    if (!principal) break;
     const diferencias = compararFacturas(principal, f);
     if (diferencias.length) throw Error(`${f.archivo}: ${diferencias.join(" ")}`);
   }
   const d: DatosNR = { ...crearDatosNR(input.fecha), ...input };
-  const errores = revisarCamposNR(d, principal);
-  if (errores.length) throw Error(`${errores.length} campo(s) para revisar: ${errores.join(" · ")}`);
   const detalles: Record<string, string>[] = [];
   const referencias = new Set<string>();
   for (const factura of facturas) for (const linea of factura.lineas) {
@@ -436,9 +449,8 @@ export function prepararNotaRemision(
     detalles.push(datosOpcionales({dCodInt: linea.codigo, dDesProSer: linea.descripcion, cUniMed: linea.unidad, dCantProSer: cantidad}));
     referencias.add(factura.cdc);
   }
-  if (!detalles.length) throw Error("Seleccioná al menos un ítem.");
   // Receptor viene del XML gDatRec, nunca de gEmis. Los cambios manuales se limitan a contacto/dirección.
-  const receptor = Object.fromEntries(Object.entries(principal.receptor).filter(([k, v]) => camposReceptor.includes(k) && String(v).trim() !== ""));
+  const receptor = Object.fromEntries(Object.entries(principal?.receptor ?? {}).filter(([k, v]) => camposReceptor.includes(k) && String(v).trim() !== ""));
   if (texto(d.clienteDireccion)) receptor.dDirRec = texto(d.clienteDireccion);
   if (texto(d.clienteTelefono)) receptor.dTelRec = texto(d.clienteTelefono);
   if (texto(d.clienteEmail)) receptor.dEmailRec = texto(d.clienteEmail);
