@@ -22,7 +22,7 @@ const tests = [
  ['No aparece pie con guardado automático', !app.includes('Datos privados · Guardado automático')],
  ['No aparece Borrador sin emitir', !nr.includes('Borrador sin emitir')],
  ['No aparece cartel de guardado en NR', !nr.includes('Guardado automático del trabajo')],
- ['Guardado interno sigue activo', app.includes('useAutoguardadoCuenta(persistente)')],
+ ['Guardado interno sigue activo', app.includes('useAutoguardadoCuenta(persistente, guardadoLocal)')],
  ['Buscador funciona por nombre/código', select.includes('Buscar por nombre o código')],
  ['Lista usa portal fuera del scroll del modal', select.includes('createPortal(') && select.includes('document.body')],
  ['CSS del buscador incluido en la aplicación', css.includes('.kp-selector-popover .kp-selector-search') && css.includes('.kp-selector-trigger')],

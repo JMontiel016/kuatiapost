@@ -22,6 +22,11 @@ function conCookie(req: NextRequest, token: string, maxAge: number) {
  * Nadie debe escribir correo, usuario ni contraseña para abrir KuatiaPost.
  */
 export async function GET(req: NextRequest) {
+  if (process.env.VERCEL === "1" && !process.env.TURSO_DATABASE_URL && !process.env.TURSO_AUTH_TOKEN) {
+    return NextResponse.json({ ok: true, modo: "local" }, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  }
   try {
     const previo = req.cookies.get(COOKIE)?.value;
     if (previo && await obtenerUsuario(previo)) {

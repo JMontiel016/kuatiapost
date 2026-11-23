@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import EnvioDocumentos from "../envio-documentos/EnvioDocumentos";
+import { leerEspacio } from "../../lib/usuario/almacenamiento-local";
 
 /** Recupera automáticamente el último borrador del navegador antes de montar
  * el editor, sin mostrar formularios de acceso ni pedir contraseña.
  */
 export default function AplicacionPrivada() {
-  const [inicial, setInicial] = useState<Record<string, unknown> | null>(null);
+  const [espacio, setEspacio] = useState<{
+    inicial: Record<string, unknown>;
+    guardadoLocal: boolean;
+  } | null>(null);
   const [error, setError] = useState("");
   const [intento, setIntento] = useState(0);
 
@@ -19,6 +23,11 @@ export default function AplicacionPrivada() {
           credentials: "same-origin", cache: "no-store",
         });
         if (!cuenta.ok) throw Error("No se pudo preparar el espacio de este navegador.");
+        const sesion = await cuenta.json();
+        if (sesion.modo === "local") {
+          if (activo) setEspacio({ inicial: leerEspacio() ?? {}, guardadoLocal: true });
+          return;
+        }
         const respuesta = await fetch("/api/estado", {
           credentials: "same-origin", cache: "no-store",
         });
@@ -27,7 +36,10 @@ export default function AplicacionPrivada() {
         if (activo) {
           const estado = datos.data && typeof datos.data === "object" && !Array.isArray(datos.data)
             ? datos.data as Record<string, unknown> : {};
-          setInicial(estado);
+          setEspacio({
+            inicial: Object.keys(estado).length ? estado : leerEspacio() ?? {},
+            guardadoLocal: false,
+          });
           setError("");
         }
       } catch (e) {
@@ -37,7 +49,7 @@ export default function AplicacionPrivada() {
     return () => { activo = false; };
   }, [intento]);
 
-  if (inicial !== null) return <EnvioDocumentos inicial={inicial} />;
+  if (espacio) return <EnvioDocumentos {...espacio} />;
   return (
     <main role="status" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 20 }}>
       <div style={{ textAlign: "center", maxWidth: 440 }}>

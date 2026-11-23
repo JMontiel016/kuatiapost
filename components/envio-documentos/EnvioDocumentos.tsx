@@ -85,8 +85,9 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 /** Coordina el editor con el último trabajo de este navegador. */
-export default function EnvioDocumentos({ inicial }: {
+export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   inicial: Record<string, unknown>;
+  guardadoLocal?: boolean;
 }) {
   // Nunca restaurar credenciales, tokens ni contraseña de servicios externos.
   const texto = (campo: string, defecto = "") => typeof inicial[campo] === "string" ? inicial[campo] as string : defecto;
@@ -249,7 +250,7 @@ export default function EnvioDocumentos({ inicial }: {
     xml, xmlOpts, question, answer, sources, includeDoc, find, replace,
     resultadoConsulta, nrMasivaSession,
   };
-  useAutoguardadoCuenta(persistente);
+  const guardado = useAutoguardadoCuenta(persistente, guardadoLocal);
   /* Registra una acción de preparación de JSON, sin realizar envíos. */
   useEffect(() => {
     const context = (document as any).modelContext;
@@ -579,6 +580,11 @@ export default function EnvioDocumentos({ inicial }: {
 
       </aside>
       <main>
+        {guardadoLocal && (
+          <p role="status">
+            {guardado.estado === "error" ? guardado.mensaje : "Los borradores se guardan en este navegador."}
+          </p>
+        )}
         <header className="topbar">
           <div className="breadcrumb">
             KuatiaPost <ChevronRight size={14} />
