@@ -122,10 +122,7 @@ export default function ConfiguracionIntegracion({
           </button>
         </section>
       </div>
-      <p className="tiny">
-        Cambiar de pantalla conserva los datos. Recargar o cerrar KuatiaPost
-        termina esta sesión.
-      </p>
+      <p className="tiny">Por seguridad, el token y la contraseña de tu servicio se ingresan nuevamente al abrir KuatiaPost.</p>
     </>
   );
 }

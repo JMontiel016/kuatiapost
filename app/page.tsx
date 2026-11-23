@@ -1,6 +1,6 @@
-import EnvioDocumentos from "../components/envio-documentos/EnvioDocumentos";
+import AplicacionPrivada from "../components/usuario/AplicacionPrivada";
 
-/** Punto de entrada exigido por Next: presenta la pantalla principal KuatiaPost. */
+/** El acceso individual se exige antes de cargar la mesa de trabajo. */
 export default function PaginaPrincipal() {
-  return <EnvioDocumentos />;
+  return <AplicacionPrivada />;
 }

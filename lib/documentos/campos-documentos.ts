@@ -1,5 +1,6 @@
 import { errorFormato } from "./formatos-campos";
 import { crearPlantilla } from "./plantillas-documentos";
+import { parDescripcion } from "./descripcion-codigos";
 
 /**
  * CATÁLOGO DE CAMPOS DE LOS DOCUMENTOS
@@ -26,6 +27,21 @@ export type InformacionCampo = {
 
 // Cada entrada contiene un nombre humano y un ejemplo; nunca rellena el dato.
 const nombres: Record<string, [string, string]> = {
+  dDesDepSal: ["Nombre del departamento de salida", "Informá el valor según el catálogo SIFEN"],
+  dDesDisSal: ["Nombre del distrito de salida", "Informá el valor según el catálogo SIFEN"],
+  dDesCiuSal: ["Nombre de la ciudad de salida", "Informá el valor según el catálogo SIFEN"],
+  dDesDepEnt: ["Nombre del departamento de entrega", "Informá el valor según el catálogo SIFEN"],
+  dDesDisEnt: ["Nombre del distrito de entrega", "Informá el valor según el catálogo SIFEN"],
+  dDesCiuEnt: ["Nombre de la ciudad de entrega", "Informá el valor según el catálogo SIFEN"],
+  dDesDepRec: ["Nombre del departamento del receptor", "Informá el valor según el catálogo SIFEN"],
+  dDesDisRec: ["Nombre del distrito del receptor", "Informá el valor según el catálogo SIFEN"],
+  dDesCiuRec: ["Nombre de la ciudad del receptor", "Informá el valor según el catálogo SIFEN"],
+  dDesDepVen: ["Nombre del departamento del vendedor", "Informá el valor según el catálogo SIFEN"],
+  dDesDisVen: ["Nombre del distrito del vendedor", "Informá el valor según el catálogo SIFEN"],
+  dDesCiuVen: ["Nombre de la ciudad del vendedor", "Informá el valor según el catálogo SIFEN"],
+  dDesDepProv: ["Nombre del departamento de la transacción", "Informá el valor según el catálogo SIFEN"],
+  dDesDisProv: ["Nombre del distrito de la transacción", "Informá el valor según el catálogo SIFEN"],
+  dDesCiuProv: ["Nombre de la ciudad de la transacción", "Informá el valor según el catálogo SIFEN"],
   tipOpe: ["Operación de tu integración", "Código definido por tu API"],
   iTiDE: ["Tipo de Documento Electrónico", "1 = factura; 5 = nota de crédito"],
   dEst: ["Establecimiento", "001"],
@@ -50,6 +66,7 @@ const nombres: Record<string, [string, string]> = {
   ],
   iTiOpe: ["Tipo de operación", "1 = entre empresas"],
   cPaisRec: ["Código de país del receptor", "PRY"],
+  dDesPaisRe: ["Descripción del país del receptor", "Paraguay"],
   iTiContRec: [
     "Tipo de contribuyente receptor",
     "1 = persona física; 2 = persona jurídica",
@@ -124,8 +141,41 @@ const nombres: Record<string, [string, string]> = {
   dMonTiPag: ["Monto por tipo de pago", "110000.0000"],
   cMoneTiPag: ["Moneda por tipo de pago", "PYG"],
   dTiCamTiPag: ["Tipo de cambio por tipo de pago", "7000.0000"],
+  dDesMotEmi: ["Descripción del motivo de NC / ND", "Devolución"],
+  dDCondOpe: ["Descripción de la condición de la operación", "Contado"],
+  dDesTipTrans: ["Descripción del tipo de transporte", "Propio"],
+  dDesModTrans: ["Descripción de modalidad de transporte", "Terrestre"],
+  dDTipIDTrans: ["Descripción del tipo de identificación del transportista", "Cédula paraguaya"],
+  cCondNeg: ["Incoterm de negociación", "FOB"],
+  dNuManif: ["Manifiesto / carta de porte", "Número del manifiesto"],
+  dIniTras: ["Inicio estimado del traslado", "AAAA-MM-DD"],
+  dFinTras: ["Finalización estimada del traslado", "AAAA-MM-DD"],
+  cPaisDest: ["País de destino", "PRY"],
+  dDesPaisDest: ["Nombre del país de destino", "Paraguay"],
+  dTiVehTras: ["Tipo de vehículo", "Camión"],
+  dMarVeh: ["Marca de vehículo", "Isuzu"],
+  dTipIdenVeh: ["Tipo de identificación del vehículo", "2 = chapa / matrícula"],
+  dNroIDVeh: ["Número de identificación del vehículo", "Identificación"],
+  dAdicVeh: ["Datos adicionales del vehículo", "Observaciones"],
+  dNroMatVeh: ["Matrícula / chapa", "ABC123"],
+  dNroVuelo: ["Número de vuelo", "ABC123"],
+  cNacTrans: ["Nacionalidad del transportista (ISO 3)", "PRY"],
+  dDesNacTrans: ["Nombre de la nacionalidad del transportista", "Paraguay"],
+  dDomFisc: ["Domicilio fiscal del transportista", "Dirección del domicilio"],
+  dDirChof: ["Dirección del conductor", "Calle y número"],
+  dNombAg: ["Nombre / razón social del agente", "Agente o intermediario"],
+  dRucAg: ["RUC del agente", "80000000"],
+  dDVAg: ["DV del agente", "0"],
+  dDirAge: ["Dirección del agente", "Calle y número"],
+  dComp1Sal: ["Complemento de dirección de salida 1", "Entre calles"],
+  dComp2Sal: ["Complemento de dirección de salida 2", "Local o piso"],
+  dTelSal: ["Teléfono de salida", "021123456"],
+  dComp1Ent: ["Complemento de dirección de entrega 1", "Entre calles"],
+  dComp2Ent: ["Complemento de dirección de entrega 2", "Depósito"],
+  dTelEnt: ["Teléfono de entrega", "021123456"],
   iMotEmiNR: ["Motivo de emisión", "1 = traslado por venta"],
   dDesMotEmiNR: ["Descripción del motivo de emisión", "Traslado por ventas"],
+  dDesRespEmiNR: ["Descripción del responsable de la NR", "Emisor de la factura"],
   iRespEmiNR: ["Responsable de la emisión de la Nota Remisión Electrónica", "1 = emisor de la factura"],
   dKmR: ["Kilómetros estimados de recorrido", "10"],
   dFecEm: ["Fecha futura de emisión de la factura", "2026-09-30"],
@@ -514,8 +564,10 @@ export function informacionCampo(
     return obligatorio("Identifica la operación, el tipo y la numeración del registro.", "Manual v150, cabecera y timbrado; contrato de integración");
   if (!grupo && ["iNatRec", "iTiOpe", "cPaisRec", "dNomRec"].includes(codigo))
     return obligatorio("Identifica al receptor de este registro.", "Manual v150, grupo D3");
-  if (codigo === "dDesIndPres") return condicion(tipo === "1" && String(documento.iIndPres) === "9", true, "Describí la forma de venta elegida como Otro; no escribas solamente Otros.");
-  if (codigo === "dDTipIDRec") return condicion(String(documento.iNatRec) === "2" && String(documento.iTipIDRec) === "9", true, "Describí cuál es la identificación elegida como Otro.");
+  // Las descripciones de códigos son campos 1-1 según el manual: se generan
+  // a partir de códigos conocidos y se ingresan manualmente solo con Otro.
+  if (codigo === "dDesIndPres") return condicion(tipo === "1" && !estaVacio(documento.iIndPres), !estaVacio(documento.iIndPres) || tipo !== "1", "Se completa desde el indicador de presencia; si elegís Otro, especificá el tipo de operación.", "Manual v150, E012");
+  if (codigo === "dDTipIDRec") return condicion(String(documento.iNatRec) === "2" && !estaVacio(documento.iTipIDRec), !estaVacio(documento.iNatRec) && (String(documento.iNatRec) !== "2" || !estaVacio(documento.iTipIDRec)), "Se completa desde el tipo de identidad; si elegís Otro, describí el documento.", "Manual v150, D209");
   if (["iCondCred","dPlazoCre","dCuotas","dMonEnt"].includes(codigo)) {
     const credito = String(documento.iCondOpe) === "2";
     if (codigo === "dMonEnt") return opcional("Entrega inicial del crédito, si corresponde.");
@@ -712,6 +764,15 @@ export function informacionCampo(
       "Se requiere en nota de crédito o débito.",
       "Manual v150, E401",
     );
+  if (codigo === "dDesPaisRe")
+    return condicion(!estaVacio(documento.cPaisRec), true,
+      "Se completa automáticamente al seleccionar país del receptor.", "Manual v150 D204");
+  if (codigo === "dDesMotEmi")
+    return condicion(["5","6"].includes(tipo) && !estaVacio(documento.iMotEmi),
+      !estaVacio(documento.iMotEmi), "Se completa automáticamente desde el motivo NC/ND.", "Manual v150, E402");
+  if (codigo === "dDCondOpe")
+    return condicion(["1","4"].includes(tipo) && !estaVacio(documento.iCondOpe),
+      !estaVacio(documento.iCondOpe), "Descripción automática de Contado / Crédito.", "Manual v150, E602");
   if (codigo === "iTipDocAso")
     return condicion(
       ["5", "6"].includes(tipo),
@@ -739,9 +800,9 @@ export function informacionCampo(
     const contado = String(documento.iCondOpe) === "1";
     const tarjeta = ["3","4"].includes(String(fila.iTiPago));
     if (["dNumCheq","dBcoEmi"].includes(codigo)) return condicion(contado && String(fila.iTiPago) === "2", true, "Completá el número de cheque de 8 caracteres y el banco emisor.");
-    if (codigo === "dDesTiPag") return condicion(contado && String(fila.iTiPago) === "99", true, "Describí la forma de pago elegida como Otro.");
+    if (codigo === "dDesTiPag") return condicion(contado && !estaVacio(fila.iTiPago), !estaVacio(documento.iCondOpe) && (!contado || !estaVacio(fila.iTiPago)), "Se completa desde el tipo de pago; si elegís Otro, indicá el tipo de pago manualmente.", "Manual v150, E607");
     if (["iDenTarj","iForProPa"].includes(codigo)) return condicion(contado && tarjeta, true, "Seleccioná la marca y el procesamiento del pago con tarjeta.");
-    if (codigo === "dDesDenTarj") return condicion(contado && tarjeta && String(fila.iDenTarj) === "99", true, "Escribí el nombre de la marca elegida como Otro.");
+    if (codigo === "dDesDenTarj") return condicion(contado && tarjeta && !estaVacio(fila.iDenTarj), !estaVacio(fila.iTiPago) && (!tarjeta || !estaVacio(fila.iDenTarj)), "Se completa desde la denominación de tarjeta; si elegís Otro, escribí la marca.", "Manual v150, E622");
     if (["dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"].includes(codigo)) return opcional("Dato adicional del pago con tarjeta, si corresponde. Nunca informes el número completo ni el código de seguridad.");
 
     if (codigo === "dTiCamTiPag")
@@ -762,57 +823,57 @@ export function informacionCampo(
   }
 
   // Campos propios de remisión y autofactura presentes en esta plantilla.
-  if (["iMotEmiNR", "dDesMotEmiNR", "iRespEmiNR"].includes(codigo))
+  if (["iMotEmiNR", "dDesMotEmiNR", "iRespEmiNR", "dDesRespEmiNR"].includes(codigo))
     return condicion(
-      tipo === "7",
-      true,
-      "Se requiere en una nota de remisión.",
-      "Manual v150, E501–E503",
+      tipo === "7" && (!["dDesMotEmiNR", "dDesRespEmiNR"].includes(codigo) ||
+        !estaVacio(documento[codigo === "dDesMotEmiNR" ? "iMotEmiNR" : "iRespEmiNR"])),
+      tipo !== "7" || !estaVacio(documento[codigo === "dDesMotEmiNR" ? "iMotEmiNR" : "iRespEmiNR"]),
+      "Descripción asociada al código. Solo se escribe libremente el motivo 99 · Otro.",
+      "Manual v150, E501–E504",
     );
-  if (["Salida", "Entrega"].includes(grupo))
-    return condicion(
-      tipo === "7" && !["cDisSal", "cDisEnt"].includes(codigo),
-      true,
-      "Se requiere para el lugar de salida o entrega de la remisión.",
-      "Manual v150, E920 y E940",
-    );
+  if (["Salida", "Entrega"].includes(grupo)) {
+    const obligatorioLocal = ["dDirLocSal","dNumCasSal","cDepSal","cCiuSal","dDirLocEnt","dNumCasEnt","cDepEnt","cCiuEnt"].includes(codigo);
+    return condicion(tipo === "7" && obligatorioLocal, true,
+      obligatorioLocal ? "Obligatorio para el local de salida o entrega." : "Opcional; si informás distrito, debe pertenecer al departamento y ciudad.",
+      "Manual v150, E920-E951");
+  }
   if (grupo === "Transporte") {
-    if (
-      [
-        "iModTrans",
-        "dNomTrans",
-        "iNatTrans",
-        "dNumIDChof",
-        "dNomChof",
-      ].includes(codigo)
-    )
-      return condicion(
-        tipo === "7",
-        true,
-        "Se requiere para identificar el transporte y el conductor.",
-        "Manual v150, E900 y E980",
-      );
-    if (["dRucTrans", "dDVTrans"].includes(codigo))
-      return condicion(
-        tipo === "7" && String(fila.iNatTrans) === "1",
-        !estaVacio(fila.iNatTrans),
-        "Se requiere si el transportista es contribuyente.",
-        "Manual v150, E983 y E984",
-      );
-    if (["iTipIDTrans", "dNumIDTrans"].includes(codigo))
-      return condicion(
-        tipo === "7" && String(fila.iNatTrans) === "2",
-        !estaVacio(fila.iNatTrans),
-        "Se requiere si el transportista no es contribuyente.",
-        "Manual v150, E985 y E987",
-      );
+    // Manual v150 E980: el grupo de transportista es opcional solamente
+    // cuando la modalidad es terrestre y el vehículo se identifica por número.
+    const transportistaInformado = ["iNatTrans", "dNomTrans", "dRucTrans", "dDVTrans", "iTipIDTrans", "dNumIDTrans", "dNomChof", "dNumIDChof"].some(k => !estaVacio(fila[k]));
+    const necesitaTransportista = tipo === "7" && (String(fila.iModTrans) !== "1" || String(fila.dTipIdenVeh) !== "1" || transportistaInformado);
+    if (["iTipTrans","iModTrans","iRespFlete"].includes(codigo))
+      return condicion(tipo === "7", true, "Datos generales de traslado.", "Manual v150, E901-E905");
+    if (["dDesTipTrans","dDesModTrans"].includes(codigo))
+      return condicion(tipo === "7" && !estaVacio(fila[codigo === "dDesTipTrans" ? "iTipTrans" : "iModTrans"]),
+        true, "Se completa según el tipo de transporte seleccionado.", "Manual v150, E902 / E904");
+    if (["dTiVehTras","dMarVeh","dTipIdenVeh"].includes(codigo))
+      return condicion(tipo === "7", true, "Obligatorio para identificar el vehículo de traslado.", "Manual v150, E960-E967");
+    if (codigo === "dNroIDVeh")
+      return condicion(tipo === "7" && String(fila.dTipIdenVeh) === "1", !estaVacio(fila.dTipIdenVeh),
+        "Obligatorio cuando identificás el vehículo por su número.", "Manual v150, E963");
+    if (codigo === "dNroMatVeh")
+      return condicion(tipo === "7" && String(fila.dTipIdenVeh) === "2", !estaVacio(fila.dTipIdenVeh),
+        "Obligatorio cuando identificás el vehículo por matrícula.", "Manual v150, E965");
+    if (codigo === "dNroVuelo")
+      return condicion(tipo === "7" && String(fila.iModTrans) === "3", !estaVacio(fila.iModTrans),
+        "Solo para transporte aéreo.", "Manual v150, E966");
+    if (["iNatTrans","dNomTrans","dNomChof","dNumIDChof"].includes(codigo))
+      return condicion(necesitaTransportista, true,
+        "El grupo de transportista se exige salvo caso especial de modalidad terrestre con número del vehículo.", "Manual v150, E980-E991");
+    if (["dRucTrans","dDVTrans"].includes(codigo))
+      return condicion(necesitaTransportista && String(fila.iNatTrans) === "1", !estaVacio(fila.iNatTrans),
+        "Obligatorio con transportista contribuyente.", "Manual v150, E983-E984");
+    if (["iTipIDTrans","dDTipIDTrans","dNumIDTrans"].includes(codigo))
+      return condicion(necesitaTransportista && String(fila.iNatTrans) === "2", !estaVacio(fila.iNatTrans),
+        "Obligatorio con transportista no contribuyente.", "Manual v150, E985-E987");
     if (codigo === "dNuDespImp")
-      return condicion(
-        tipo === "7" && String(documento.iMotEmiNR) === "5",
-        !estaVacio(documento.iMotEmiNR),
-        "Se requiere en un traslado por importación.",
-        "Manual v150, E908",
-      );
+      return condicion(tipo === "7" && String(documento.iMotEmiNR) === "5", !estaVacio(documento.iMotEmiNR),
+        "Obligatorio en importaciones (16 caracteres).", "Manual v150, E908");
+    if (codigo === "dDesNacTrans")
+      return condicion(tipo === "7" && !estaVacio(fila.cNacTrans), !estaVacio(fila.cNacTrans),
+        "Si informás nacionalidad, también informá su descripción.", "Manual v150, E989");
+    return opcional("Dato adicional del traslado; completalo solamente cuando corresponda.");
   }
   if (
     [
@@ -1040,6 +1101,38 @@ export function validarDocumento(documento: any, tipo: string) {
     if (codigo === "dCantProSer" && !estaVacio(valor) && Number(valor) <= 0)
       errores.push("(dCantProSer) Cantidad: debe ser mayor que cero.");
   });
+  // Revisión de pares código/descripcion incluso en JSON importado o pegado.
+  // El grupo correcto evita confundir datos del receptor con los del emisor.
+  const comprobarPar = (padre: any, codigo: string, ruta: string, activo = true) => {
+    if (!activo || !padre) return;
+    const regla = parDescripcion(codigo);
+    if (!regla || estaVacio(padre[codigo])) return;
+    const cod = String(padre[codigo]);
+    const actual = String(padre[regla.campo] ?? "").trim();
+    const esperado = regla.valores[cod];
+    if (esperado && actual !== esperado)
+      errores.push(`(${regla.campo}) ${ruta}: para el código ${cod} corresponde exactamente «${esperado}».`);
+    if (regla.otro && cod === regla.otro && (!actual || /^(otro|otros|otra|otras)$/i.test(actual)))
+      errores.push(`(${regla.campo}) ${ruta}: escribí una descripción concreta para Otro.`);
+  };
+  comprobarPar(documento, "iMotEmi", "motivo NC/ND", ["5","6"].includes(tipo));
+  comprobarPar(documento, "iCondOpe", "condición contado/crédito", ["1","4"].includes(tipo));
+  if (tipo === "7" && Array.isArray(documento.Transporte)) {
+    for (const [i,transporte] of documento.Transporte.entries()) {
+      comprobarPar(transporte,"iTipTrans",`Transporte.${i}`);
+      comprobarPar(transporte,"iModTrans",`Transporte.${i}`);
+      comprobarPar(transporte,"iTipIDTrans",`Transporte.${i}`,String(transporte.iNatTrans)==="2");
+    }
+  }
+  comprobarPar(documento, "iIndPres", "presencia", tipo === "1");
+  comprobarPar(documento, "iTipIDRec", "identificación del receptor", String(documento.iNatRec) === "2");
+  comprobarPar(documento, "iMotEmiNR", "motivo de remisión", tipo === "7");
+  comprobarPar(documento, "iRespEmiNR", "responsable de remisión", tipo === "7");
+  if (["1", "4"].includes(tipo) && String(documento.iCondOpe) === "1")
+    for (const [i, pago] of (documento.Pagos || []).entries()) {
+      comprobarPar(pago, "iTiPago", `Pagos.${i}`);
+      comprobarPar(pago, "iDenTarj", `Pagos.${i}`, ["3", "4"].includes(String(pago.iTiPago)));
+    }
   // Aplica también a JSON pegados o importados, no solo al formulario.
   recorrerCampos(documento, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);

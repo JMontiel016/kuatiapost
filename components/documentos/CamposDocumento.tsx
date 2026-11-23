@@ -9,6 +9,9 @@ import {
 } from "../../lib/documentos/campos-documentos";
 
 import { crearPlantilla } from "../../lib/documentos/plantillas-documentos";
+import SelectorGeografia, { type Ubicacion } from "./SelectorGeografia";
+import SelectorPais from "./SelectorPais";
+import { cambiarCodigoYDescripcion } from "../../lib/documentos/descripcion-codigos";
 import {
   formatoCampo,
   descripcionFormato,
@@ -98,6 +101,50 @@ export default function CamposDocumento({
       return null;
     // Una plantilla importada no habilita campos de un tipo documental distinto.
     if (grupo ? !(codigo in (base[grupo]?.[0] || {})) : !(codigo in base)) return null;
+    // País por nombre + código ISO-3, tanto en receptor como en traslado.
+    if (["cPaisRec","cPaisDest","cNacTrans"].includes(codigo)) {
+      const fuente = grupo ? fila : documento;
+      const descripcionClave = codigo === "cPaisRec" ? "dDesPaisRe" : codigo === "cPaisDest" ? "dDesPaisDest" : "dDesNacTrans";
+      return <SelectorPais key={ruta} titulo={codigo === "cPaisRec" ? "País del cliente / receptor" : codigo === "cPaisDest" ? "País de destino" : "Nacionalidad del transportista"}
+        codigo={String(fuente[codigo] || "")}
+        opcional={codigo !== "cPaisRec"}
+        alCambiar={(nuevo,nombre) => {
+          const copia = structuredClone(documento);
+          const destino = grupo ? copia[grupo][Number(ruta.split(".")[1])] : copia;
+          destino[codigo]=nuevo;
+          destino[descripcionClave]=nombre;
+          guardar(copia);
+        }}/>
+    }
+    if (["dDesPaisRe","dDesPaisDest","dDesNacTrans"].includes(codigo)) return null;
+    // Dirección por catálogo SIFEN: el usuario busca por nombre y el formulario
+    // persiste exactamente los códigos fiscales y las descripciones correlativas.
+    const geografias = ["Rec", "Ven", "Prov", "Sal", "Ent"] as const;
+    const sufijo = geografias.find(s => codigo === `cDep${s}` || codigo === `cDis${s}` || codigo === `cCiu${s}`);
+    if (sufijo) {
+      if (codigo !== `cDep${sufijo}`) return null;
+      const infoDep = informacionCampo(codigo, documento, tipo, fila, grupo);
+      const incompleto = !estaVacio(fila?.[`cCiu${sufijo}`]) || !estaVacio(fila?.[`cDep${sufijo}`]);
+      if (infoDep.estado === "opcional" && !incompleto && !verOpcionales) return null;
+      const fuente = grupo ? fila : documento;
+      const valor: Ubicacion = {
+        departamento: String(fuente[`cDep${sufijo}`] || ""), departamentoDesc: String(fuente[`dDesDep${sufijo}`] || ""),
+        distrito: String(fuente[`cDis${sufijo}`] || ""), distritoDesc: String(fuente[`dDesDis${sufijo}`] || ""),
+        ciudad: String(fuente[`cCiu${sufijo}`] || ""), ciudadDesc: String(fuente[`dDesCiu${sufijo}`] || ""),
+      };
+      return <SelectorGeografia key={`${grupo}:${sufijo}:${ruta}`} titulo={grupo ? `Ubicación de ${nombresGrupos[grupo] || grupo}` : sufijo === "Rec" ? "Ubicación del cliente / receptor" : sufijo === "Ven" ? "Ubicación del vendedor" : "Lugar de la transacción"}
+        valor={valor} alCambiar={cambios => {
+          const copia = structuredClone(documento);
+          const destino = grupo ? copia[grupo][Number(ruta.split(".")[1])] : copia;
+          const nombres = { departamento:"Dep", distrito:"Dis", ciudad:"Ciu", departamentoDesc:"DesDep", distritoDesc:"DesDis", ciudadDesc:"DesCiu" } as const;
+          for (const [k,v] of Object.entries(cambios)) {
+            const nombre = nombres[k as keyof Ubicacion];
+            if (!nombre) continue;
+            destino[`${nombre.startsWith("Des") ? "d" : "c"}${nombre}${sufijo}`] = v;
+          }
+          guardar(copia);
+        }}/>
+    }
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
     if (info.estado === "opcional" && estaVacio(valor) && !verOpcionales) return null;
     // Los datos que no corresponden se retiran del formulario, aunque hayan sido
@@ -106,6 +153,16 @@ export default function CamposDocumento({
     if (inaplicable) return null;
     if (grupo === "Pagos" && ["dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"].includes(codigo) && !["3","4"].includes(String(fila.iTiPago))) return null;
     const bloqueado = false;
+    // Las descripciones codificadas oficiales no se escriben manualmente:
+    // solo los valores «Otro» habilitan el texto libre correspondiente.
+    const autoDescripcion = ["dDesMotEmi", "dDCondOpe", "dDesTipTrans", "dDesModTrans", "dDTipIDTrans",
+      "dDesIndPres", "dDTipIDRec", "dDesTiPag", "dDesDenTarj", "dDesMotEmiNR", "dDesRespEmiNR"].includes(codigo);
+    const otroLibre = (codigo === "dDesIndPres" && String(documento.iIndPres) === "9") ||
+      (codigo === "dDTipIDRec" && String(documento.iTipIDRec) === "9") ||
+      (codigo === "dDesTiPag" && String(fila.iTiPago) === "99") ||
+      (codigo === "dDesDenTarj" && String(fila.iDenTarj) === "99") ||
+      (codigo === "dDesMotEmiNR" && String(documento.iMotEmiNR) === "99");
+    const soloLectura = autoDescripcion && !otroLibre;
     const formato = formatoCampo(codigo);
     const fueraDelCatalogo =
       !estaVacio(valor) &&
@@ -133,22 +190,21 @@ export default function CamposDocumento({
       let padre = nuevo;
       for (const parte of partes.slice(0, -1)) padre = padre[parte];
       padre[partes.at(-1)!] = texto;
+      // Los códigos conocidos autocompletan su descripción fiscal; «Otro» queda
+      // vacío para exigir un texto real. Solo se toca el grupo que se está editando.
+      cambiarCodigoYDescripcion(padre, codigo, texto);
       // Cambiar un selector limpia exclusivamente sus dependencias incompatibles.
       if (codigo === "iNatRec") {
         for (const k of texto === "1" ? ["iTipIDRec","dDTipIDRec","dNumIDRec"] : ["iTiContRec","dRucRec","dDVRec"]) delete nuevo[k];
       }
-      if (codigo === "iIndPres" && texto !== "9") delete nuevo.dDesIndPres;
-      if (codigo === "iTipIDRec" && texto !== "9") delete nuevo.dDTipIDRec;
       // La condición de crédito conserva solo el plazo o las cuotas elegidas.
       if (codigo === "iCondOpe" && texto === "1") {
         for (const k of ["iCondCred", "dPlazoCre", "dCuotas", "dMonEnt"]) delete nuevo[k];
       }
       if (codigo === "iCondCred" && texto === "1") delete nuevo.dCuotas;
       if (codigo === "iCondCred" && texto === "2") delete nuevo.dPlazoCre;
-      if (codigo === "iDenTarj" && texto !== "99") delete padre.dDesDenTarj;
       if (codigo === "iTiPago") {
         if (texto !== "2") for (const k of ["dNumCheq","dBcoEmi"]) delete padre[k];
-        if (texto !== "99") delete padre.dDesTiPag;
         if (!["3","4"].includes(texto)) for (const k of ["iDenTarj","dDesDenTarj","iForProPa","dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"]) delete padre[k];
       }
 
@@ -206,6 +262,8 @@ export default function CamposDocumento({
             id={ruta}
             value={bloqueado ? "" : String(valor ?? "")}
             disabled={bloqueado}
+            readOnly={soloLectura}
+            title={soloLectura ? "Se completa automáticamente al seleccionar el código" : undefined}
             inputMode={
               formato?.tipo === "numero"
                 ? formato.decimales

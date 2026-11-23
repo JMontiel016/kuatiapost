@@ -23,6 +23,7 @@ import {
   ArrowDownToLine,
   PanelLeft,
   AlertTriangle,
+  Ban,
 } from "lucide-react";
 import {
   tiposDocumento as documentTypes,
@@ -63,12 +64,15 @@ import {
   type DatosConsulta,
 } from "../../lib/integracion/consulta-kude";
 import GenerarNotaCredito from "../documentos/GenerarNotaCredito";
+import EventosConsultas from "../documentos/EventosConsultas";
+import GenerarNotaRemisionMasiva from "../documentos/GenerarNotaRemisionMasiva";
+import { useAutoguardadoCuenta } from "../usuario/useAutoguardadoCuenta";
 
 type View = "workspace" | "consulta" | "settings" | "manual";
 /** Las pantallas describen tareas concretas; no hay login porque el acceso es público. */
 const navigation = [
   { id: "workspace", label: "Envío de datos", icon: Braces },
-  { id: "consulta", label: "Consulta y KUDE", icon: Files },
+  { id: "consulta", label: "Eventos / Consultas", icon: Files },
 ];
 
 /** Descarga un archivo generado localmente y libera la URL temporal. */
@@ -80,30 +84,38 @@ function save(blob: Blob, name: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-/** Coordina los documentos, la conexión y los datos de esta sesión, sin persistencia. */
-export default function EnvioDocumentos() {
+/** Coordina el editor con el último trabajo de este navegador. */
+export default function EnvioDocumentos({ inicial }: {
+  inicial: Record<string, unknown>;
+}) {
+  // Nunca restaurar credenciales, tokens ni contraseña de servicios externos.
+  const texto = (campo: string, defecto = "") => typeof inicial[campo] === "string" ? inicial[campo] as string : defecto;
+  const booleano = (campo: string, defecto = false) => typeof inicial[campo] === "boolean" ? inicial[campo] as boolean : defecto;
+  const objeto = (campo: string) => inicial[campo] && typeof inicial[campo] === "object" && !Array.isArray(inicial[campo]) ? inicial[campo] as Record<string, any> : null;
+  const [nrMasivaOpen, setNrMasivaOpen] = useState(false);
+  const [nrMasivaSession, setNrMasivaSession] = useState<any>(objeto("nrMasivaSession"));
   const [campoEnfocado, setCampoEnfocado] = useState<CampoEnfocado | null>(
     null,
   );
 
   // Navegación, tipo de registro y vista del editor.
-  const [view, setView] = useState<View>("workspace"),
-    [type, setType] = useState("1"),
-    [mode, setMode] = useState("emit"),
-    [body, setBody] = useState(pretty(template("1"))),
-    [editorTab, setEditorTab] = useState("form");
+  const [view, setView] = useState<View>(["workspace", "consulta", "settings", "manual"].includes(texto("view")) ? texto("view") as View : "workspace"),
+    [type, setType] = useState(texto("type", "1")),
+    [mode, setMode] = useState(texto("mode", "emit")),
+    [body, setBody] = useState(texto("body", pretty(template("1")))),
+    [editorTab, setEditorTab] = useState(texto("editorTab", "form"));
 
   // Conexión y credenciales temporales de la integración.
-  const [url, setUrl] = useState(""),
-    [method, setMethod] = useState("POST"),
+  const [url, setUrl] = useState(texto("url")),
+    [method, setMethod] = useState(texto("method", "POST")),
     [token, setToken] = useState(""),
-    [ruc, setRuc] = useState(""),
+    [ruc, setRuc] = useState(texto("ruc")),
     [password, setPassword] = useState(""),
-    [authUrl, setAuthUrl] = useState("");
+    [authUrl, setAuthUrl] = useState(texto("authUrl"));
   // Direcciones independientes; KUDE comparte consulta solo cuando se elige esa opción.
-  const [consultaUrl, setConsultaUrl] = useState("");
-  const [kudeUrl, setKudeUrl] = useState("");
-  const [compartirKude, setCompartirKude] = useState(true);
+  const [consultaUrl, setConsultaUrl] = useState(texto("consultaUrl"));
+  const [kudeUrl, setKudeUrl] = useState(texto("kudeUrl"));
+  const [compartirKude, setCompartirKude] = useState(booleano("compartirKude", true));
   // Borrador editable: se conserva incluso mientras su sintaxis está incompleta.
   const [authJson, setAuthJson] = useState(pretty({ ruc: "", password: "" }));
   const [authError, setAuthError] = useState("");
@@ -126,18 +138,18 @@ export default function EnvioDocumentos() {
 
   // Respuesta, historial y mensajes de revisión de esta sesión.
   const [busy, setBusy] = useState(false),
-    [response, setResponse] = useState<any>(null),
-    [records, setRecords] = useState<any[]>([]),
+    [response, setResponse] = useState<any>(objeto("response")),
+    [records, setRecords] = useState<any[]>(Array.isArray(inicial.records) ? inicial.records.slice(0,1) : []),
     [notice, cambiarNotice] = useState(""),
     [errors, setErrors] = useState<string[]>([]),
-    [find, setFind] = useState(""),
-    [replace, setReplace] = useState("");
+    [find, setFind] = useState(texto("find")),
+    [replace, setReplace] = useState(texto("replace"));
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
   const [ordenado, cambiarOrdenado] = useState<{ mensajes: string[]; registro: string } | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
-  const [oscuro, cambiarOscuro] = useState(false);
-  const [verRespuesta, cambiarVerRespuesta] = useState(true);
+  const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
+  const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
   function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
   // Avisos temporales; no se eliminan ni el borrador ni los errores de campo.
   useEffect(() => {
@@ -159,10 +171,11 @@ export default function EnvioDocumentos() {
     dPunExp: "",
     dNumDoc: "",
     tipoDoc: "FE",
+    ...objeto("datosConsulta"),
   });
   // Dos borradores independientes permiten ampliar cada operación sin perder propiedades.
-  const [jsonConsulta, setJsonConsulta] = useState(pretty(crearConsulta(datosConsulta, "estado")));
-  const [jsonKude, setJsonKude] = useState(pretty(crearConsulta(datosConsulta, "kude")));
+  const [jsonConsulta, setJsonConsulta] = useState(texto("jsonConsulta",pretty(crearConsulta(datosConsulta, "estado"))));
+  const [jsonKude, setJsonKude] = useState(texto("jsonKude",pretty(crearConsulta(datosConsulta, "kude"))));
   function cambiarDatosConsulta(datos: DatosConsulta) {
     setDatosConsulta(datos);
     const actualizar = (texto: string, operacion: "estado" | "kude") => {
@@ -190,21 +203,21 @@ export default function EnvioDocumentos() {
       });
     } catch { /* El error se informa al intentar consultar; el texto no se pierde. */ }
   }
-  const [resultadoConsulta, setResultadoConsulta] = useState<any>(null);
+  const [resultadoConsulta, setResultadoConsulta] = useState<any>(objeto("resultadoConsulta"));
   const [pdfConsulta, setPdfConsulta] = useState<Blob | null>(null);
-  const borradores = useRef<Record<string, string>>({});
+  const borradores = useRef<Record<string, string>>(objeto("borradores") as Record<string, string> || {});
 
   // Pregunta, explicación y referencias del asistente.
-  const [question, setQuestion] = useState(""),
-    [answer, setAnswer] = useState(""),
+  const [question, setQuestion] = useState(texto("question")),
+    [answer, setAnswer] = useState(texto("answer")),
     [aiError, setAiError] = useState(""),
-    [sources, setSources] = useState<any[]>([]),
+    [sources, setSources] = useState<any[]>(Array.isArray(inicial.sources) ? inicial.sources : []),
     [aiBusy, setAiBusy] = useState(false),
-    [includeDoc, setIncludeDoc] = useState(false);
+    [includeDoc, setIncludeDoc] = useState(booleano("includeDoc"));
 
   // Datos y opciones de la nota de crédito desde XML.
   const [xmlOpen, setXmlOpen] = useState(false),
-    [xml, setXml] = useState(""),
+    [xml, setXml] = useState(texto("xml")),
     [xmlOpts, setXmlOpts] = useState<any>({
       establishment: "",
       point: "",
@@ -215,6 +228,7 @@ export default function EnvioDocumentos() {
       quantity: "",
       amount: "",
       single: false,
+      ...objeto("xmlOpts"),
     });
   const editor = useRef<HTMLTextAreaElement>(null),
     file = useRef<HTMLInputElement>(null),
@@ -223,6 +237,19 @@ export default function EnvioDocumentos() {
     borradores.current[`${mode}:${type}`] = body;
   }, [body, mode, type]);
 
+  // Un solo último borrador por perfil de navegador, separado en el servidor.
+  // Contraseña, token y JSON de autenticación nunca se guardan.
+  const persistente: Record<string, unknown> = {
+    view, type, mode, body, editorTab, method,
+    url, authUrl, consultaUrl, kudeUrl, compartirKude, ruc,
+    borradores: { ...borradores.current, [`${mode}:${type}`]: body },
+    // No guardar response: la respuesta de autenticación puede traer un token.
+    records: records.slice(0, 1),
+    oscuro, verRespuesta, datosConsulta, jsonConsulta, jsonKude,
+    xml, xmlOpts, question, answer, sources, includeDoc, find, replace,
+    resultadoConsulta, nrMasivaSession,
+  };
+  useAutoguardadoCuenta(persistente);
   /* Registra una acción de preparación de JSON, sin realizar envíos. */
   useEffect(() => {
     const context = (document as any).modelContext;
@@ -547,18 +574,9 @@ export default function EnvioDocumentos() {
           Configuración
         </button>
         </nav>
-        <div className="sidebar-note">
-          <ShieldCheck size={20} />
-          <strong>Tu conexión, tus datos</strong>
-          <p>Credenciales y datos permanecen en esta sesión.</p>
-        </div>
+
         <button className={view === "manual" ? "nav-item active" : "nav-item"} onClick={() => setView("manual")}><FileCode size={19}/>Manual de uso</button>
-        <div className="sidebar-footer">
-          <span className="logo-publico"><LogoKuatiaPost /></span>
-          <div>
-            Acceso público<small>Sin cuenta · sin instalación</small>
-          </div>
-        </div>
+
       </aside>
       <main>
         <header className="topbar">
@@ -568,6 +586,7 @@ export default function EnvioDocumentos() {
               {view === "manual" ? "Manual de uso" : navigation.find((n) => n.id === view)?.label || "Configuración"}
             </strong>
           </div>
+
           {/* Control compacto del tema, accesible también con teclado. */}
           <button className="theme-toggle" onClick={() => cambiarOscuro(!oscuro)}
             aria-label={oscuro ? "Activar modo claro" : "Activar modo oscuro"}
@@ -775,10 +794,7 @@ export default function EnvioDocumentos() {
                         onChange={setToken}
                         placeholder="Pegá tu token o generá uno en Configuración"
                       />
-                      <p>
-                        Se envía únicamente a la URL que elegís. No se guarda al
-                        cerrar esta página.
-                      </p>
+                      <p>El token se utiliza en esta sesión y no se guarda en el servidor.</p>
                       <button
                         className="outline"
                         onClick={() => setView("settings")}
@@ -929,6 +945,11 @@ export default function EnvioDocumentos() {
                       </span>
                       <ChevronRight size={16} />
                     </button>
+                    <button className="import-option nr-import-entry" onClick={() => setNrMasivaOpen(true)}>
+                      <span className="import-icon"><FileCode size={18} /></span>
+                      <span><strong>Crear NR masiva desde XML/TXT</strong><small>Carpeta o varios archivos · una sola NR</small></span>
+                      <ChevronRight size={16} />
+                    </button>
                     <button
                       className="text-button reset"
                       onClick={() => {
@@ -1015,29 +1036,38 @@ export default function EnvioDocumentos() {
             />
           )}
           {view === "consulta" && (
-            <ConsultarDocumento
-              token={token} setToken={setToken}
-              consultaUrl={consultaUrl} setConsultaUrl={setConsultaUrl}
-              kudeUrl={kudeUrl} setKudeUrl={setKudeUrl}
-              compartirKude={compartirKude}
-              datos={datosConsulta}
-              alCambiar={cambiarDatosConsulta}
-              jsonConsulta={jsonConsulta} jsonKude={jsonKude}
-              alEditarJson={cambiarJsonConsulta}
-              alConsultar={consultarDocumento}
-              ocupado={busy}
-              resultado={resultadoConsulta}
-              pdf={pdfConsulta}
-              alDescargar={save}
-            />
+            <EventosConsultas token={token} consulta={{
+              token, setToken,
+              consultaUrl, setConsultaUrl,
+              kudeUrl, setKudeUrl,
+              compartirKude,
+              datos: datosConsulta,
+              alCambiar: cambiarDatosConsulta,
+              jsonConsulta, jsonKude,
+              alEditarJson: cambiarJsonConsulta,
+              alConsultar: consultarDocumento,
+              ocupado: busy,
+              resultado: resultadoConsulta,
+              pdf: pdfConsulta,
+              alDescargar: save,
+            }}/>
           )}
         </div>
         <footer className="main-footer">
           <span>KuatiaPost</span>
           <span>Datos electrónicos · Paraguay</span>
-          <span>Datos de sesión · Sin almacenamiento permanente</span>
+
         </footer>
       </main>
+      {nrMasivaOpen && (
+        <GenerarNotaRemisionMasiva
+          onClose={() => setNrMasivaOpen(false)}
+          setBody={setBody} setType={setType} setMode={setMode}
+          setErrors={setErrors} setNotice={setNotice} setView={setView}
+          sessionData={nrMasivaSession} onSessionChange={setNrMasivaSession}
+          oscuro={oscuro} onToggleTema={() => cambiarOscuro(!oscuro)}
+        />
+      )}
       {xmlOpen && (
         <GenerarNotaCredito
           setXmlOpen={setXmlOpen}

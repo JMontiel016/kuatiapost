@@ -14,7 +14,7 @@ const blank = (fields: string) =>
 export function crearPlantilla(type: string) {
   // Cabecera común: los códigos conservan su nombre esperado por la integración.
   const common = blank(
-    "tipOpe iTiDE dEst dPunExp dNumDoc dFeEmiDE dInfoEmi dInfoFisc iTipTra iTImp cMoneOpe dCondTiCam dTiCam iIndPres dDesIndPres iNatRec iTiOpe cPaisRec iTiContRec dRucRec dDVRec iTipIDRec dDTipIDRec dNumIDRec dNomRec dDirRec dNumCasRec cDepRec cDisRec cCiuRec dTelRec dCelRec dEmailRec",
+    "tipOpe iTiDE dEst dPunExp dNumDoc dFeEmiDE dInfoEmi dInfoFisc iTipTra iTImp cMoneOpe dCondTiCam dTiCam iIndPres dDesIndPres iNatRec iTiOpe cPaisRec dDesPaisRe iTiContRec dRucRec dDVRec iTipIDRec dDTipIDRec dNumIDRec dNomRec dDirRec dNumCasRec cDepRec cDisRec cCiuRec dTelRec dCelRec dEmailRec",
   );
 
   // Cada documento tiene su propia cabecera: no se exponen campos de otros tipos.
@@ -38,19 +38,20 @@ export function crearPlantilla(type: string) {
     };
   if (["5", "6"].includes(type))
     extra = {
-      iMotEmi: "",
+      iMotEmi: "", dDesMotEmi: "",
       DocumentosAsociados: [blank("iTipDocAso dCdCDERef")],
     };
   if (type === "7")
     extra = {
-      ...blank("iMotEmiNR dDesMotEmiNR iRespEmiNR dKmR dFecEm"),
-      Transporte: [
-        blank(
-          "iTipTrans iModTrans iRespFlete dNuDespImp iNatTrans dNomTrans dRucTrans dDVTrans iTipIDTrans dNumIDTrans dNomChof dNumIDChof",
-        ),
-      ],
-      Salida: [blank("dDirLocSal dNumCasSal cDepSal cDisSal cCiuSal")],
-      Entrega: [blank("dDirLocEnt dNumCasEnt cDepEnt cDisEnt cCiuEnt")],
+      ...blank("iMotEmiNR dDesMotEmiNR iRespEmiNR dDesRespEmiNR dKmR dFecEm"),
+      Transporte: [blank(
+        "iTipTrans dDesTipTrans iModTrans dDesModTrans iRespFlete cCondNeg dNuManif dNuDespImp dIniTras dFinTras cPaisDest dDesPaisDest " +
+        "dTiVehTras dMarVeh dTipIdenVeh dNroIDVeh dAdicVeh dNroMatVeh dNroVuelo " +
+        "iNatTrans dNomTrans dRucTrans dDVTrans iTipIDTrans dDTipIDTrans dNumIDTrans " +
+        "cNacTrans dDesNacTrans dNumIDChof dNomChof dDomFisc dDirChof dNombAg dRucAg dDVAg dDirAge",
+      )],
+      Salida: [blank("dDirLocSal dNumCasSal dComp1Sal dComp2Sal cDepSal cDisSal cCiuSal dTelSal")],
+      Entrega: [blank("dDirLocEnt dNumCasEnt dComp1Ent dComp2Ent cDepEnt cDisEnt cCiuEnt dTelEnt")],
     };
   if (type === "4")
     extra = { ...blank("iCondOpe iCondCred dPlazoCre dCuotas dMonEnt"), Pagos: [blank("iTiPago dDesTiPag dMonTiPag cMoneTiPag dTiCamTiPag dNumCheq dBcoEmi iDenTarj dDesDenTarj iForProPa dRSProTar dRUCProTar dDVProTar dCodAuOpe dNomTit dNumTarj")], ...blank(

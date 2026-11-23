@@ -10,6 +10,32 @@ export type FormatoCampo = {
   referencia: string;
 };
 const formatos: Record<string, FormatoCampo> = {
+  dDesPaisRe: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "SIFEN D204" },
+  dTiVehTras: { tipo: "texto", minimo: 4, maximo: 10, decimales: 0, referencia: "SIFEN E961" },
+  dMarVeh: { tipo: "texto", minimo: 1, maximo: 10, decimales: 0, referencia: "SIFEN E962" },
+  dTipIdenVeh: { tipo: "numero", minimo: 1, maximo: 1, decimales: 0, referencia: "SIFEN E967" },
+  dNroIDVeh: { tipo: "texto", minimo: 1, maximo: 20, decimales: 0, referencia: "SIFEN E963" },
+  dAdicVeh: { tipo: "texto", minimo: 1, maximo: 20, decimales: 0, referencia: "SIFEN E964" },
+  dNroMatVeh: { tipo: "texto", minimo: 6, maximo: 6, decimales: 0, referencia: "SIFEN E965" },
+  dNroVuelo: { tipo: "texto", minimo: 6, maximo: 6, decimales: 0, referencia: "SIFEN E966" },
+  dDomFisc: { tipo: "texto", minimo: 1, maximo: 150, decimales: 0, referencia: "SIFEN E992" },
+  dDirChof: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E993" },
+  dNombAg: { tipo: "texto", minimo: 4, maximo: 60, decimales: 0, referencia: "SIFEN E994" },
+  dRucAg: { tipo: "numero", minimo: 3, maximo: 8, decimales: 0, referencia: "SIFEN E995" },
+  dDVAg: { tipo: "numero", minimo: 1, maximo: 1, decimales: 0, referencia: "SIFEN E996" },
+  dDirAge: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E997" },
+  cNacTrans: { tipo: "letras", minimo: 3, maximo: 3, decimales: 0, referencia: "SIFEN E988" },
+  dDesNacTrans: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "SIFEN E989" },
+  dNuManif: { tipo: "texto", minimo: 1, maximo: 15, decimales: 0, referencia: "SIFEN E906" },
+  dIniTras: { tipo: "fecha-dia", minimo: 10, maximo: 10, decimales: 0, referencia: "SIFEN E909" },
+  dFinTras: { tipo: "fecha-dia", minimo: 10, maximo: 10, decimales: 0, referencia: "SIFEN E910" },
+  cPaisDest: { tipo: "letras", minimo: 3, maximo: 3, decimales: 0, referencia: "SIFEN E907" },
+  dDesPaisDest: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "SIFEN E911" },
+  dComp1Sal: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E930" },
+  dComp2Sal: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E930" },
+  dComp1Ent: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E940" },
+  dComp2Ent: { tipo: "texto", minimo: 1, maximo: 255, decimales: 0, referencia: "SIFEN E940" },
+  dDesRespEmiNR: { tipo: "texto", minimo: 20, maximo: 36, decimales: 0, referencia: "SIFEN E504" },
   dDesIndPres: { tipo: "texto", minimo: 10, maximo: 30, decimales: 0, referencia: "Reglas de campos" },
   dDTipIDRec: { tipo: "texto", minimo: 9, maximo: 41, decimales: 0, referencia: "Reglas de campos" },
   dDesTiPag: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "Reglas de campos" },
@@ -851,6 +877,11 @@ export function errorFormato(codigo: string, valor: unknown): string {
   const f = formatoCampo(codigo);
   if (!f) return "";
   const texto = String(valor);
+  // El propio Manual v150 (E504) contiene una excepción contradictoria:
+  // fija longitud 20-36 pero la descripción oficial del código 1 es
+  // «Emisor de la factura» (19 caracteres). Admitimos la literal oficial,
+  // sin modificarla ni introducir una descripción fiscal inventada.
+  if (codigo === "dDesRespEmiNR" && texto === "Emisor de la factura") return "";
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/u.test(texto))
     return "Contiene caracteres no admitidos en el registro.";
   if (f.tipo === "fecha" || f.tipo === "fecha-dia") {
