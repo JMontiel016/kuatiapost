@@ -1,34 +1,67 @@
 /**
- * Almacenamiento privado de KuatiaPost (Node.js 22+, SQLite local).
- * Requiere un directorio persistente y privado en el servidor. No usar el disco
- * efímero de un hosting serverless ni incluir este directorio en el repositorio.
+ * Almacenamiento privado de KuatiaPost. SQLite en disco local y libSQL remoto en Vercel.
  */
-import { DatabaseSync } from "node:sqlite";
+import { createClient, type Client, type InStatement } from "@libsql/client";
 import { mkdirSync, chmodSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { randomBytes, createHash, scryptSync, timingSafeEqual, randomUUID } from "node:crypto";
 
 export const COOKIE = "kuatiapost_sesion";
 // Se identifica el navegador por una cookie aleatoria de larga duración.
 // No equivale a una cuenta personal: compartir el mismo perfil comparte el espacio.
 const SESION_MS = 365 * 24 * 60 * 60 * 1000;
-let conexion: DatabaseSync | undefined;
+let conexion: Promise<Client> | undefined;
+let operacionesLocales: Promise<unknown> = Promise.resolve();
 
-function bd() {
-  if (conexion) return conexion;
-  const ruta = process.env.KUATIAPOST_DATA_DIR
-    ? resolve(/* turbopackIgnore: true */ process.env.KUATIAPOST_DATA_DIR)
-    : join(process.cwd(), "data");
-  mkdirSync(ruta, { recursive: true, mode: 0o700 });
-  // Restringir los datos locales incluso cuando la carpeta fue creada con otros permisos.
-  chmodSync(ruta, 0o700);
-  const archivo = join(ruta, "kuatiapost.sqlite");
-  const db = new DatabaseSync(archivo);
-  chmodSync(archivo, 0o600);
-  db.exec(`
-    PRAGMA journal_mode=WAL;
-    PRAGMA foreign_keys=ON;
-    PRAGMA busy_timeout=5000;
+async function conBase<T>(operar: (db: Client) => Promise<T>): Promise<T> {
+  const db = await bd();
+  if (process.env.TURSO_DATABASE_URL) return operar(db);
+  // SQLite ejecuta las escrituras de forma síncrona. Evita que otra operación
+  // bloquee el hilo mientras una transacción asíncrona local espera continuar.
+  const operacion = operacionesLocales.then(() => operar(db));
+  operacionesLocales = operacion.catch(() => undefined);
+  return operacion;
+}
+
+function ejecutar(sentencia: InStatement) {
+  return conBase(db => db.execute(sentencia));
+}
+
+function bd(): Promise<Client> {
+  conexion ??= abrirBase().catch(error => {
+    conexion = undefined;
+    throw error;
+  });
+  return conexion;
+}
+
+async function abrirBase() {
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  if ((url || authToken || process.env.VERCEL === "1") && (!url || !authToken)) {
+    throw Error("Configurá TURSO_DATABASE_URL y TURSO_AUTH_TOKEN para usar el almacenamiento remoto.");
+  }
+
+  let archivo: string | undefined;
+  if (!url) {
+    const ruta = process.env.KUATIAPOST_DATA_DIR
+      ? resolve(/* turbopackIgnore: true */ process.env.KUATIAPOST_DATA_DIR)
+      : join(process.cwd(), "data");
+    mkdirSync(ruta, { recursive: true, mode: 0o700 });
+    chmodSync(ruta, 0o700);
+    archivo = join(ruta, "kuatiapost.sqlite");
+  }
+
+  const db = archivo
+    ? createClient({ url: pathToFileURL(archivo).href, timeout: 5000 })
+    : createClient({ url: url!, authToken });
+  try {
+    if (archivo) {
+      await db.execute("PRAGMA journal_mode=WAL");
+      chmodSync(archivo, 0o600);
+    }
+    await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, salt TEXT NOT NULL,
       hash TEXT NOT NULL, creado INTEGER NOT NULL
@@ -49,16 +82,19 @@ function bd() {
     );
     CREATE INDEX IF NOT EXISTS idx_remisiones_usuario_estado
       ON remisiones(usuario_id, estado);
-  `);
-  conexion = db;
-  return db;
+    `);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 
 type Usuario = { id: string; email: string };
 type FilaUsuario = Usuario & { salt: string; hash: string };
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
-export function registrar(email: string, clave: string) {
+export async function registrar(email: string, clave: string) {
   email = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
     throw Error("Ingresá un correo válido.");
@@ -68,8 +104,7 @@ export function registrar(email: string, clave: string) {
   const salt = randomBytes(24).toString("hex");
   const hash = scryptSync(clave, Buffer.from(salt, "hex"), 64).toString("hex");
   try {
-    bd().prepare("INSERT INTO usuarios(id,email,salt,hash,creado) VALUES (?,?,?,?,?)")
-      .run(id, email, salt, hash, Date.now());
+    await ejecutar({ sql: "INSERT INTO usuarios(id,email,salt,hash,creado) VALUES (?,?,?,?,?)", args: [id, email, salt, hash, Date.now()] });
   } catch (error: any) {
     if (String(error.message).includes("UNIQUE")) throw Error("Este correo ya tiene una cuenta.");
     throw error;
@@ -77,9 +112,8 @@ export function registrar(email: string, clave: string) {
   return { id, email };
 }
 
-export function autenticar(email: string, clave: string): Usuario | null {
-  const f = bd().prepare("SELECT id,email,salt,hash FROM usuarios WHERE email=?")
-    .get(email.trim().toLowerCase()) as FilaUsuario | undefined;
+export async function autenticar(email: string, clave: string): Promise<Usuario | null> {
+  const f = (await ejecutar({ sql: "SELECT id,email,salt,hash FROM usuarios WHERE email=?", args: [email.trim().toLowerCase()] })).rows[0] as unknown as FilaUsuario | undefined;
   // Hacer el mismo trabajo de scrypt si el correo no existe, para reducir
   // diferencias de tiempo observables al validar usuarios.
   const salt = f?.salt || "0".repeat(48);
@@ -88,30 +122,27 @@ export function autenticar(email: string, clave: string): Usuario | null {
   return f && timingSafeEqual(real, calculado) ? { id: f.id, email: f.email } : null;
 }
 
-export function nuevaSesion(usuario: Usuario) {
+export async function nuevaSesion(usuario: Usuario) {
   const token = randomBytes(32).toString("base64url");
   const vence = Date.now() + SESION_MS;
-  bd().prepare("INSERT INTO sesiones(token_hash,usuario_id,vence) VALUES (?,?,?)")
-    .run(hashToken(token), usuario.id, vence);
-  bd().prepare("DELETE FROM sesiones WHERE vence < ?").run(Date.now());
+  await ejecutar({ sql: "INSERT INTO sesiones(token_hash,usuario_id,vence) VALUES (?,?,?)", args: [hashToken(token), usuario.id, vence] });
+  await ejecutar({ sql: "DELETE FROM sesiones WHERE vence < ?", args: [Date.now()] });
   return { token, maxAge: Math.floor(SESION_MS / 1000) };
 }
 
-export function obtenerUsuario(token?: string | null): Usuario | null {
+export async function obtenerUsuario(token?: string | null): Promise<Usuario | null> {
   if (!token || token.length > 200) return null;
-  const row = bd().prepare(`SELECT u.id,u.email FROM sesiones s
-    JOIN usuarios u ON u.id=s.usuario_id WHERE s.token_hash=? AND s.vence>?`)
-    .get(hashToken(token), Date.now()) as Usuario | undefined;
+  const row = (await ejecutar({ sql: `SELECT u.id,u.email FROM sesiones s
+    JOIN usuarios u ON u.id=s.usuario_id WHERE s.token_hash=? AND s.vence>?`, args: [hashToken(token), Date.now()] })).rows[0] as unknown as Usuario | undefined;
   return row || null;
 }
 
 /** Renueva la identificación del navegador para evitar perderla por inactividad.
  * El token nunca se envía al código cliente ni se registra en el estado.
  */
-export function renovarSesion(token: string): number {
+export async function renovarSesion(token: string): Promise<number> {
   const expira = Date.now() + SESION_MS;
-  bd().prepare("UPDATE sesiones SET vence=? WHERE token_hash=? AND vence>?")
-    .run(expira, hashToken(token), Date.now());
+  await ejecutar({ sql: "UPDATE sesiones SET vence=? WHERE token_hash=? AND vence>?", args: [expira, hashToken(token), Date.now()] });
   return Math.floor(SESION_MS / 1000);
 }
 
@@ -119,18 +150,23 @@ export function renovarSesion(token: string): number {
  * Reusa las tablas existentes para conservar la separación de remisiones y estados.
  * Las cuentas antiguas permanecen intactas; no se migran datos entre personas.
  */
-export function nuevaIdentidadNavegador(): { token: string; maxAge: number } {
+export async function nuevaIdentidadNavegador(): Promise<{ token: string; maxAge: number }> {
   const id = randomUUID();
   const salt = randomBytes(24).toString("hex");
   const hash = randomBytes(64).toString("hex");
   const email = `perfil-${id}@browser.kuatiapost.invalid`;
-  bd().prepare("INSERT INTO usuarios(id,email,salt,hash,creado) VALUES (?,?,?,?,?)")
-    .run(id, email, salt, hash, Date.now());
-  return nuevaSesion({ id, email });
+  const ahora = Date.now();
+  const token = randomBytes(32).toString("base64url");
+  await conBase(db => db.batch([
+    { sql: "INSERT INTO usuarios(id,email,salt,hash,creado) VALUES (?,?,?,?,?)", args: [id, email, salt, hash, ahora] },
+    { sql: "INSERT INTO sesiones(token_hash,usuario_id,vence) VALUES (?,?,?)", args: [hashToken(token), id, ahora + SESION_MS] },
+    { sql: "DELETE FROM sesiones WHERE vence < ?", args: [ahora] },
+  ], "write"));
+  return { token, maxAge: Math.floor(SESION_MS / 1000) };
 }
 
-export function cerrarSesion(token?: string | null) {
-  if (token) bd().prepare("DELETE FROM sesiones WHERE token_hash=?").run(hashToken(token));
+export async function cerrarSesion(token?: string | null) {
+  if (token) await ejecutar({ sql: "DELETE FROM sesiones WHERE token_hash=?", args: [hashToken(token)] });
 }
 
 // No se guardan tokens, contraseñas de integración ni JSON de autenticación.
@@ -144,7 +180,7 @@ const camposPermitidos = [
   "nrMasivaSession",
 ];
 
-export function guardarEspacio(usuarioId: string, datos: unknown) {
+export async function guardarEspacio(usuarioId: string, datos: unknown) {
   if (!datos || Array.isArray(datos) || typeof datos !== "object") throw Error("Datos inválidos.");
   const obj = datos as Record<string, unknown>;
   const filtrado: Record<string, unknown> = {};
@@ -165,15 +201,13 @@ export function guardarEspacio(usuarioId: string, datos: unknown) {
   }
   const json = JSON.stringify(filtrado);
   if (Buffer.byteLength(json, "utf8") > 15_000_000) throw Error("El borrador supera 15 MB.");
-  bd().prepare(`INSERT INTO espacios(usuario_id,json,actualizado) VALUES (?,?,?)
-    ON CONFLICT(usuario_id) DO UPDATE SET json=excluded.json,actualizado=excluded.actualizado`)
-    .run(usuarioId, json, Date.now());
+  await ejecutar({ sql: `INSERT INTO espacios(usuario_id,json,actualizado) VALUES (?,?,?)
+    ON CONFLICT(usuario_id) DO UPDATE SET json=excluded.json,actualizado=excluded.actualizado`, args: [usuarioId, json, Date.now()] });
   return { actualizado: Date.now() };
 }
 
-export function leerEspacio(usuarioId: string): Record<string, any> {
-  const row = bd().prepare("SELECT json FROM espacios WHERE usuario_id=?")
-    .get(usuarioId) as { json: string } | undefined;
+export async function leerEspacio(usuarioId: string): Promise<Record<string, any>> {
+  const row = (await ejecutar({ sql: "SELECT json FROM espacios WHERE usuario_id=?", args: [usuarioId] })).rows[0] as unknown as { json: string } | undefined;
   return row ? JSON.parse(row.json) : {};
 }
 
@@ -192,10 +226,9 @@ export function decimalExacto(valor: string): bigint {
   return BigInt(entero) * 100000000n + BigInt(decimales.padEnd(8, "0"));
 }
 
-export function listarRemisiones(usuarioId: string): Remision[] {
-  const rows = bd().prepare(`SELECT id,estado,lineas,resultado,creado,actualizado FROM remisiones
-    WHERE usuario_id=? ORDER BY creado DESC LIMIT 500`)
-    .all(usuarioId) as Array<{id:string; estado:string; lineas:string;resultado:string|null;creado:number;actualizado:number}>;
+export async function listarRemisiones(usuarioId: string): Promise<Remision[]> {
+  const rows = (await ejecutar({ sql: `SELECT id,estado,lineas,resultado,creado,actualizado FROM remisiones
+    WHERE usuario_id=? ORDER BY creado DESC LIMIT 500`, args: [usuarioId] })).rows as unknown as Array<{id:string; estado:string; lineas:string;resultado:string|null;creado:number;actualizado:number}>;
   return rows.map(r => ({ id:r.id, estado:r.estado, lineas:JSON.parse(r.lineas),
     resultado:r.resultado ? JSON.parse(r.resultado) : undefined,
     creado:r.creado, actualizado:r.actualizado }));
@@ -206,7 +239,7 @@ export function listarRemisiones(usuarioId: string): Remision[] {
  * Las solicitudes inciertas NO se liberan, ya que el emisor podría haber emitido
  * el DE aunque la conexión haya terminado en timeout.
  */
-export function reservarRemision(usuarioId: string, id: string, lineas: LineaRemision[]) {
+export async function reservarRemision(usuarioId: string, id: string, lineas: LineaRemision[]) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw Error("Identificador de borrador inválido.");
   if (!Array.isArray(lineas) || !lineas.length || lineas.length > 999)
     throw Error("Elegí entre 1 y 999 líneas de remisión.");
@@ -222,37 +255,37 @@ export function reservarRemision(usuarioId: string, id: string, lineas: LineaRem
     if (decimalExacto(linea.cantidad) > decimalExacto(linea.total))
       throw Error("No podés remitir más que la cantidad original.");
   }
-  const db = bd();
-  db.exec("BEGIN IMMEDIATE");
-  try {
-    const actual = db.prepare("SELECT estado FROM remisiones WHERE usuario_id=? AND id=?")
-      .get(usuarioId, id) as { estado: string } | undefined;
-    if (actual) throw Error(`Este borrador ya fue procesado (${actual.estado}). Consultá el estado antes de reenviar.`);
-    const reservadas = db.prepare(`SELECT lineas FROM remisiones WHERE usuario_id=? AND estado IN ('pendiente','incierto','aprobado')`)
-      .all(usuarioId) as Array<{lineas:string}>;
-    const ocupadas = new Map<string,bigint>();
-    for (const reg of reservadas) for (const l of JSON.parse(reg.lineas) as LineaRemision[]) {
-      const llave = `${l.cdc}:${l.indice}`;
-      ocupadas.set(llave, (ocupadas.get(llave)||0n) + decimalExacto(l.cantidad));
+  await conBase(async db => {
+    const tx = await db.transaction("write");
+    try {
+      const actual = (await tx.execute({ sql: "SELECT estado FROM remisiones WHERE usuario_id=? AND id=?", args: [usuarioId, id] })).rows[0] as unknown as { estado: string } | undefined;
+      if (actual) throw Error(`Este borrador ya fue procesado (${actual.estado}). Consultá el estado antes de reenviar.`);
+      const reservadas = (await tx.execute({ sql: `SELECT lineas FROM remisiones WHERE usuario_id=? AND estado IN ('pendiente','incierto','aprobado')`, args: [usuarioId] })).rows as unknown as Array<{lineas:string}>;
+      const ocupadas = new Map<string,bigint>();
+      for (const reg of reservadas) for (const l of JSON.parse(reg.lineas) as LineaRemision[]) {
+        const llave = `${l.cdc}:${l.indice}`;
+        ocupadas.set(llave, (ocupadas.get(llave)||0n) + decimalExacto(l.cantidad));
+      }
+      for (const l of lineas) {
+        const llave = `${l.cdc}:${l.indice}`;
+        if ((ocupadas.get(llave)||0n)+decimalExacto(l.cantidad) > decimalExacto(l.total))
+          throw Error(`Cantidad disponible insuficiente para la línea ${l.indice+1} de ${l.cdc}. Revisá remisiones ya emitidas o pendientes.`);
+      }
+      const ahora = Date.now();
+      await tx.execute({ sql: `INSERT INTO remisiones(usuario_id,id,estado,lineas,creado,actualizado)
+        VALUES (?,?,?,?,?,?)`, args: [usuarioId,id,"pendiente",JSON.stringify(lineas),ahora,ahora] });
+      await tx.commit();
+    } finally {
+      tx.close();
     }
-    for (const l of lineas) {
-      const llave = `${l.cdc}:${l.indice}`;
-      if ((ocupadas.get(llave)||0n)+decimalExacto(l.cantidad) > decimalExacto(l.total))
-        throw Error(`Cantidad disponible insuficiente para la línea ${l.indice+1} de ${l.cdc}. Revisá remisiones ya emitidas o pendientes.`);
-    }
-    const ahora = Date.now();
-    db.prepare(`INSERT INTO remisiones(usuario_id,id,estado,lineas,creado,actualizado)
-      VALUES (?,?,?,?,?,?)`).run(usuarioId,id,"pendiente",JSON.stringify(lineas),ahora,ahora);
-    db.exec("COMMIT");
-  } catch(e) { db.exec("ROLLBACK"); throw e; }
+  });
 }
 
 /** No confiar en un booleano 'aprobado' proporcionado por el navegador. */
-export function resolverRemision(usuarioId:string, id:string, respuesta: any) {
+export async function resolverRemision(usuarioId:string, id:string, respuesta: any) {
   const respuestaCDC = String(respuesta?.data?.CDC || respuesta?.data?.cdc ||
     respuesta?.data?.message?.CDC || respuesta?.data?.message?.cdc || "");
-  const registro = bd().prepare("SELECT lineas FROM remisiones WHERE usuario_id=? AND id=?")
-    .get(usuarioId,id) as {lineas:string}|undefined;
+  const registro = (await ejecutar({ sql: "SELECT lineas FROM remisiones WHERE usuario_id=? AND id=?", args: [usuarioId,id] })).rows[0] as unknown as {lineas:string}|undefined;
   const origenes = new Set((registro ? JSON.parse(registro.lineas) as LineaRemision[] : []).map(l=>l.cdc));
   const aprobado = respuesta?.http >= 200 && respuesta?.http < 300 &&
     (respuesta?.data?.Estado === "Aprobado" || respuesta?.data?.message?.Estado === "Aprobado") &&
@@ -263,9 +296,8 @@ export function resolverRemision(usuarioId:string, id:string, respuesta: any) {
     estadoReportado: String(respuesta?.data?.Estado || respuesta?.data?.message?.Estado || "").slice(0,100),
     cdcNR: respuestaCDC.slice(0,60),
   };
-  const result = bd().prepare(`UPDATE remisiones SET estado=?, resultado=?, actualizado=?
-    WHERE usuario_id=? AND id=? AND estado='pendiente'`)
-    .run(estado,JSON.stringify(respuestaSegura),Date.now(),usuarioId,id);
-  if (result.changes !== 1) throw Error("La remisión ya se procesó o no tiene una reserva activa.");
+  const result = await ejecutar({ sql: `UPDATE remisiones SET estado=?, resultado=?, actualizado=?
+    WHERE usuario_id=? AND id=? AND estado='pendiente'`, args: [estado,JSON.stringify(respuestaSegura),Date.now(),usuarioId,id] });
+  if (result.rowsAffected !== 1) throw Error("La remisión ya se procesó o no tiene una reserva activa.");
   return { estado };
 }
