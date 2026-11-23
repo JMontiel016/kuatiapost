@@ -7,7 +7,7 @@
 - El manual v150 y las notas 001–027 quedan en lib/asistente/fuentes-sifen.json como fuente interna; se devuelve la explicación y referencias de página, no el manual.
 - FC, NC, ND, remisión, autofactura; JSON editable, campos vacíos, Excel y NC desde XML.
 
-## Ejecutar el código descargado (Node 22+)
+## Ejecutar el código descargado (Node.js 24)
 1. npm install
 2. cp .env.example .env.local
 3. Instalar Ollama si no está instalado: https://ollama.com/download/linux
@@ -17,6 +17,14 @@
 7. Abrir http://localhost:3005
 
 El código descargado usa React con Next.js para disponer del backend integrado. La edición del Site utiliza Vinext, compatible con las rutas del mismo proyecto. No necesita configurar Llama en cada navegador ni entregar claves a los visitantes.
+
+## Almacenamiento persistente en Vercel
+
+Conectá una base Turso al proyecto y habilitá sus variables `TURSO_DATABASE_URL`
+y `TURSO_AUTH_TOKEN` para Production. Las rutas de cuentas, borradores y
+remisiones comparten esa base y crean sus tablas al primer uso.
+En una instalación local, con ambas variables vacías, se sigue usando
+`data/kuatiapost.sqlite` o el directorio indicado con `KUATIAPOST_DATA_DIR`.
 
 ## Configuración del servidor IA
 LLAMA_URL=http://127.0.0.1:11434/v1/chat/completions

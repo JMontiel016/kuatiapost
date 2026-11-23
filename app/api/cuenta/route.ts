@@ -24,10 +24,10 @@ function conCookie(req: NextRequest, token: string, maxAge: number) {
 export async function GET(req: NextRequest) {
   try {
     const previo = req.cookies.get(COOKIE)?.value;
-    if (previo && obtenerUsuario(previo)) {
-      return conCookie(req, previo, renovarSesion(previo));
+    if (previo && await obtenerUsuario(previo)) {
+      return conCookie(req, previo, await renovarSesion(previo));
     }
-    const nuevo = nuevaIdentidadNavegador();
+    const nuevo = await nuevaIdentidadNavegador();
     return conCookie(req, nuevo.token, nuevo.maxAge);
   } catch (error) {
     console.error("No se pudo recuperar el espacio del navegador", error);
