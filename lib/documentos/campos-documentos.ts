@@ -1104,9 +1104,8 @@ export function completarDescripciones(documento: any, tipo: string) {
   return resultado;
 }
 
-/** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
-export function validarDocumento(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
-  const estructura = ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega"].flatMap(grupo => {
+export function validarEstructuraDocumento(documento: Record<string, unknown>) {
+  return ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega"].flatMap(grupo => {
     if (!(grupo in documento)) return [];
     const filas = documento[grupo];
     if (!Array.isArray(filas)) return [`(${grupo}) Debe ser una lista entre corchetes [ ].`];
@@ -1114,6 +1113,11 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
       return [`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`];
     return [];
   });
+}
+
+/** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
+export function validarDocumento(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
+  const estructura = validarEstructuraDocumento(documento);
   if (estructura.length) return estructura;
   const relaciones = revisarDescripciones(documento, tipo);
   const usaFormaPago = ["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago);

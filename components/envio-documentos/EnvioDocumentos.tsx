@@ -553,7 +553,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
       }
     }
   }
-  function verificarJSONCompleto() {
+  function verificarJSON() {
     cambiarInformeJSON(null);
     setErrors([]);
     cambiarRevisionRealizada(false);
@@ -887,33 +887,8 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                   </div>
                   <div className="bottom-tools">
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
-                    <button
-                      onClick={() => {
-                        cambiarInformeJSON(null);
-                        cambiarRevisionRealizada(true);
-                        try {
-                          const p = parseObject(body);
-                          const tipoRevision = mode === "emit" ? type : String(p.iTiDE || "");
-                          // Verificar la estructura antes de recorrer filas evita errores
-                          // técnicos si un grupo fue escrito como objeto o como texto.
-                          const textoRevisado = revisarTextoJSON(body);
-                          const problemas = [...textoRevisado.errores];
-                          if (String(p.tipOpe) === "1" && !["1","4","5","6","7"].includes(tipoRevision)) problemas.push("(iTiDE) Para emitir informá un tipo reconocido: 1, 4, 5, 6 o 7.");
-                          if (["1","4","5","6","7"].includes(tipoRevision)) {
-                            problemas.push(...validateDocument(p, tipoRevision, textoRevisado.numeros));
-                          } else {
-                            for (const grupo of ["Detalles", "Pagos", "Subtotales", "DocumentosAsociados"]) {
-                              if (grupo in p && !Array.isArray(p[grupo])) problemas.push(`(${grupo}) Debe ser una lista entre corchetes [ ].`);
-                              else if (Array.isArray(p[grupo]) && p[grupo].some((fila:any)=>!fila || typeof fila !== "object" || Array.isArray(fila))) problemas.push(`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`);
-                            }
-                          }
-                          if (p.gCamItem && !p.Detalles) problemas.push("(gCamItem) La plantilla de envío usa Detalles para la lista de productos. Confirmá la clave que espera tu integración.");
-                          setErrors(problemas);
-                        } catch (error:any) { setErrors([error.message || "El JSON no es válido."]); }
-                      }}
-                    >
-                      <ShieldCheck size={16} />
-                      Revisar
+                    <button type="button" onClick={verificarJSON}>
+                      <ShieldCheck size={16} /> Verificar JSON
                     </button>
                     <button
                       onClick={() =>
@@ -956,9 +931,6 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <button onClick={() => downloadExcel()}>
                       <ArrowDownToLine size={16} />
                       Excel
-                    </button>
-                    <button type="button" onClick={verificarJSONCompleto}>
-                      <ShieldCheck size={16} /> Verificar JSON completo
                     </button>
                   </div>
                   {informeCompleto && <details className={`validation ${informeCompleto.mensajes.length || descripcionesSugeridas.length ? "revision-warning" : "revision-success"}`} open role="status">

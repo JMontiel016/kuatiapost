@@ -1,7 +1,7 @@
 import { applyEdits, format } from "jsonc-parser";
 import { quitarComentariosJSON, revisarTextoJSON } from "./solicitudes-integracion";
 import catalogo from "../../documentacion/CATALOGO_NOMBRES_MANUAL.json";
-import { informacionCampo, validarDocumento } from "../documentos/campos-documentos";
+import { informacionCampo, validarDocumento, validarEstructuraDocumento } from "../documentos/campos-documentos";
 
 /** Solo modifica espacios fuera de las cadenas. Conserva literalmente números,
  * textos, claves e ítems, incluso enteros mayores que la precisión de JavaScript. */
@@ -73,8 +73,12 @@ export function prepararJSONPegado(texto: string, tipoSeleccionado?: string): { 
   if (valor && typeof valor === "object" && !Array.isArray(valor)) {
     if (["1", "4", "5", "6", "7"].includes(tipo))
       mensajes.push(...validarDocumento(valor, tipo, revisionTexto.numeros));
-    else
+    else {
+      mensajes.push(...validarEstructuraDocumento(valor));
       mensajes.push("Para aplicar las reglas de un documento de emisión, indicá iTiDE: 1, 4, 5, 6 o 7.");
+    }
+    if (valor.gCamItem && !valor.Detalles)
+      mensajes.push("(gCamItem) La plantilla de envío usa Detalles para los productos. Confirmá la clave que espera tu integración.");
   } else {
     mensajes.push("La solicitud debe ser un objeto JSON.");
   }
