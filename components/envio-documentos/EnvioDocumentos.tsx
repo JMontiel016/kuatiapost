@@ -150,7 +150,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     [replace, setReplace] = useState(texto("replace"));
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
-  const [ordenado, cambiarOrdenado] = useState<{ mensajes: string[]; registro: string } | null>(null);
+  const [informeJSON, cambiarInformeJSON] = useState<{ mensajes: string[]; registro: string; sobre: string } | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
   const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
@@ -537,7 +537,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     });
   }
   function formatearJSON() {
-    cambiarOrdenado(null);
+    cambiarInformeJSON(null);
     try {
       setBody(ordenarJSON(body));
       setErrors([]);
@@ -546,20 +546,52 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
       try {
         const resultado = prepararJSONPegado(body);
         setBody(resultado.json);
-        cambiarOrdenado(resultado);
+        cambiarInformeJSON({ ...resultado, sobre: resultado.json });
       } catch (error) {
         cambiarRevisionRealizada(true);
         setErrors([`No se pudo ordenar: ${error instanceof Error ? error.message : "revisá la sintaxis del JSON"}`]);
       }
     }
   }
+  function verificarJSONCompleto() {
+    cambiarInformeJSON(null);
+    setErrors([]);
+    cambiarRevisionRealizada(false);
+    try {
+      const resultado = prepararJSONPegado(body, mode === "emit" ? type : undefined);
+      cambiarInformeJSON({ ...resultado, sobre: body });
+    } catch (error) {
+      let mensaje = error instanceof Error ? error.message : "No se pudo verificar el JSON.";
+      try { parseObject(body); }
+      catch (sintaxis) { if (sintaxis instanceof Error) mensaje = sintaxis.message; }
+      cambiarRevisionRealizada(true);
+      setErrors([mensaje]);
+    }
+  }
+
   // La guía se actualiza con los datos del formulario, sin llamar a la IA por cada tecla.
   const faltantesActuales =
     parsed && mode === "emit" ? camposFaltantes(parsed, type) : [];
   const tipoRevisionActual = mode === "emit" ? type : String(parsed?.iTiDE || "");
-  const descripcionesSugeridas = revisionRealizada && parsed && ["1","4","5","6","7"].includes(tipoRevisionActual)
+  const informeCompleto = informeJSON?.sobre === body ? informeJSON : null;
+  const descripcionesSugeridas = (revisionRealizada || informeCompleto) && parsed && ["1","4","5","6","7"].includes(tipoRevisionActual)
     ? revisarDescripciones(parsed, tipoRevisionActual).sugerencias
     : [];
+  const accionesDescripciones = descripcionesSugeridas.length > 0 && (
+      <div className="errores-desplegables">
+        <p>Podés aplicar estas descripciones o dejar el JSON como está si tu integración las genera a partir de los códigos.</p>
+        <ul>
+          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor, reemplaza }) => {
+            const ruta = grupo ? `${grupo}[${indice}].${campo}` : campo;
+            return <li key={ruta}><code>{ruta}</code> · {reemplaza ? "Reemplazar por " : ""}{valor} (según <code>{codigo}</code>)</li>;
+          })}
+        </ul>
+        <button type="button" onClick={() => {
+          setBody(pretty(completarDescripciones(parsed, tipoRevisionActual)));
+          setNotice("Descripciones completadas en el JSON.", "success");
+        }}>Autocompletar descripciones</button>
+      </div>
+    );
   // Solo el estado explícito del documento permite mostrar aprobación.
   const approved =
     response?.data?.Estado === "Aprobado" ||
@@ -857,6 +889,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
                     <button
                       onClick={() => {
+                        cambiarInformeJSON(null);
                         cambiarRevisionRealizada(true);
                         try {
                           const p = parseObject(body);
@@ -924,31 +957,21 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                       <ArrowDownToLine size={16} />
                       Excel
                     </button>
+                    <button type="button" onClick={verificarJSONCompleto}>
+                      <ShieldCheck size={16} /> Verificar JSON completo
+                    </button>
                   </div>
-                  {ordenado && <details className="validation revision-warning" open role="status">
-                    <summary>Resultado de la última ordenación</summary>
-                    <button onClick={() => cambiarOrdenado(null)}>Cerrar revisión</button>
-                    <div className="errores-desplegables">{ordenado.mensajes.length ? ordenado.mensajes.map((mensaje, i) => <p key={i}>{mensaje}</p>) : <p>JSON formateado. No se detectaron avisos con las reglas disponibles.</p>}</div>
-                    {ordenado.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{ordenado.registro}</pre></details>}
+                  {informeCompleto && <details className={`validation ${informeCompleto.mensajes.length || descripcionesSugeridas.length ? "revision-warning" : "revision-success"}`} open role="status">
+                    <summary>Verificación completa del JSON</summary>
+                    <button onClick={() => cambiarInformeJSON(null)}>Cerrar revisión</button>
+                    <div className="errores-desplegables">{informeCompleto.mensajes.length ? informeCompleto.mensajes.map((mensaje, i) => <p key={i}>{mensaje}</p>) : <p>No se detectaron avisos con el catálogo y las reglas disponibles.</p>}</div>
+                    {informeCompleto.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{informeCompleto.registro}</pre></details>}
+                    {accionesDescripciones}
                   </details>}
                   {(revisionRealizada || errors.length > 0) && <details className={`validation ${errors.length ? "revision-warning" : "revision-success"}`} open role="status">
                     <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin errores detectados"}</summary>
                     <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
-                    {descripcionesSugeridas.length > 0 && (
-                      <div className="errores-desplegables">
-                        <p>Podés aplicar estas descripciones o dejar el JSON como está si tu integración las genera a partir de los códigos.</p>
-                        <ul>
-                          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor, reemplaza }) => {
-                            const ruta = grupo ? `${grupo}[${indice}].${campo}` : campo;
-                            return <li key={ruta}><code>{ruta}</code> · {reemplaza ? "Reemplazar por " : ""}{valor} (según <code>{codigo}</code>)</li>;
-                          })}
-                        </ul>
-                        <button type="button" onClick={() => {
-                          setBody(pretty(completarDescripciones(parsed, tipoRevisionActual)));
-                          setNotice("Descripciones completadas en el JSON.", "success");
-                        }}>Autocompletar descripciones</button>
-                      </div>
-                    )}
+                    {!informeCompleto && accionesDescripciones}
                   </details>}
                 </section>
                 <aside className="right-column">

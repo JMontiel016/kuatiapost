@@ -1,5 +1,5 @@
 import { applyEdits, format } from "jsonc-parser";
-import { quitarComentariosJSON } from "./solicitudes-integracion";
+import { quitarComentariosJSON, revisarTextoJSON } from "./solicitudes-integracion";
 import catalogo from "../../documentacion/CATALOGO_NOMBRES_MANUAL.json";
 import { informacionCampo, validarDocumento } from "../documentos/campos-documentos";
 
@@ -39,7 +39,7 @@ function finBloque(texto: string, inicio: number): number {
 
 /** Conserva el bloque original para que formatear no redondee importes.
  * Los registros adjuntos solo se separan si comienzan con una fecha de log. */
-export function prepararJSONPegado(texto: string): { json: string; mensajes: string[]; registro: string } {
+export function prepararJSONPegado(texto: string, tipoSeleccionado?: string): { json: string; mensajes: string[]; registro: string } {
   const limpio = texto.trim();
   let principal = limpio, registro = "";
   try { JSON.parse(quitarComentariosJSON(limpio)); }
@@ -53,30 +53,33 @@ export function prepararJSONPegado(texto: string): { json: string; mensajes: str
       throw new Error("Hay texto adicional que no se reconoce como registro. Separalo antes de ordenar.");
   }
   const valor = JSON.parse(quitarComentariosJSON(principal));
-  const mensajes: string[] = [];
+  const revisionTexto = revisarTextoJSON(principal);
+  const mensajes = [...revisionTexto.errores];
+  const tipo = tipoSeleccionado || String(valor?.iTiDE || "");
   // Los campos personalizados se conservan: no reconocido no significa inválido.
-  const grupos = new Set(["Detalles", "Pagos", "Subtotales", "DocumentosAsociados", "Cuotas", "tipOpe", "tipoDoc", "ruc", "password"]);
+  const grupos = new Set(["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Cuotas", "tipOpe", "tipoDoc", "ruc", "password"]);
   function revisar(v: any, ruta = "") {
     if (Array.isArray(v)) return v.forEach((fila, i) => revisar(fila, `${ruta}[${i + 1}]`));
     if (!v || typeof v !== "object") return;
     Object.entries(v).forEach(([clave, dato]) => {
       const ubicacion = ruta ? `${ruta}.${clave}` : clave;
-      if (!Object.hasOwn(catalogo, clave) && !grupos.has(clave) && informacionCampo(clave, valor, String(valor?.iTiDE || "")).estado === "integracion")
+      if (!Object.hasOwn(catalogo, clave) && !grupos.has(clave) && informacionCampo(clave, valor, tipo).estado === "integracion")
         mensajes.push(`${ubicacion}: campo no reconocido en el catálogo disponible; confirmá si tu API lo admite. Se conserva.`);
       if (clave === "FormaPago") mensajes.push(`${ubicacion}: tu integración puede esperar Pagos. Confirmá su contrato antes de renombrar.`);
-      if (typeof dato === "string" && dato.includes("\uFFFD")) mensajes.push(`${ubicacion}: contiene caracteres dañados (�). Revisá el texto de origen.`);
       revisar(dato, ubicacion);
     });
   }
   revisar(valor);
-  if (valor && !Array.isArray(valor) && ["1","4","5","6","7"].includes(String(valor.iTiDE))) {
-    // La estructura debe ser segura antes de ejecutar las reglas de los campos.
-    const mal = ["Detalles","Pagos","Subtotales","DocumentosAsociados"].filter(g => valor[g] != null && (!Array.isArray(valor[g]) || valor[g].some((fila: any) => !fila || typeof fila !== "object" || Array.isArray(fila))));
-    if (mal.length) mal.forEach(g => mensajes.push(`${g}: debe contener una lista de objetos.`));
-    else mensajes.push(...validarDocumento(valor, String(valor.iTiDE)));
+  if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+    if (["1", "4", "5", "6", "7"].includes(tipo))
+      mensajes.push(...validarDocumento(valor, tipo, revisionTexto.numeros));
+    else
+      mensajes.push("Para aplicar las reglas de un documento de emisión, indicá iTiDE: 1, 4, 5, 6 o 7.");
+  } else {
+    mensajes.push("La solicitud debe ser un objeto JSON.");
   }
   if (registro) {
-    mensajes.unshift("Se separó el registro adjunto: solo el JSON de la solicitud queda en el editor.");
+    mensajes.unshift("Se detectó un registro adjunto y se analizó por separado.");
     const inicio = registro.indexOf("{");
     if (inicio >= 0) {
       try {

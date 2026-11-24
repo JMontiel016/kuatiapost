@@ -70,6 +70,14 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    assert.ok(textoRevisado.errores.some(e => /Detalles\[0\]\.dCodInt.*Clave repetida.*línea/.test(e)));
    assert.throws(() => parseObject('{"a": 1,\n "b": }'), /línea 2, columna/);
  });
+ await ok('verificación completa combina catálogo y diagnósticos del texto original', () => {
+   const texto = '{"iTiDE":1,"tipOpe":1,"dEst":"01","campoSoloDeMiApi":true,\n"Detalles":[{"dCantProSer":1.000000000,"dCodInt":"A","dCodInt":"B"}]}';
+   const informe = prepararJSONPegado(texto, '1');
+   assert.ok(informe.mensajes.some(e => /campoSoloDeMiApi.*campo no reconocido/.test(e)));
+   assert.ok(informe.mensajes.some(e => /dEst.*3 caracteres/.test(e)));
+   assert.ok(informe.mensajes.some(e => /dCantProSer.*9 decimales/.test(e)));
+   assert.ok(informe.mensajes.some(e => /dCodInt.*Clave repetida/.test(e)));
+ });
  await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
    const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };
    const revision = revisarDescripciones(doc, '1');
