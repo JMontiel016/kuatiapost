@@ -387,7 +387,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
         }
         const pendientes = revisarDescripciones(data, type).sugerencias.length;
         const aviso = pendientes
-          ? "\n\nEl JSON omite descripciones deducibles. Confirmá solo si tu integración las genera."
+          ? "\n\nHay descripciones pendientes de completar o ajustar. Confirmá solo si tu integración las genera a partir de los códigos."
           : "";
         if (
           !window.confirm(
@@ -916,11 +916,11 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
                     {descripcionesSugeridas.length > 0 && (
                       <div className="errores-desplegables">
-                        <p>Podés completar estas descripciones o dejar el JSON como está si tu integración las genera al emitir.</p>
+                        <p>Podés aplicar estas descripciones o dejar el JSON como está si tu integración las genera a partir de los códigos.</p>
                         <ul>
-                          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor }) => {
+                          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor, reemplaza }) => {
                             const ruta = grupo ? `${grupo}[${indice}].${campo}` : campo;
-                            return <li key={ruta}><code>{ruta}</code> · {valor} (según <code>{codigo}</code>)</li>;
+                            return <li key={ruta}><code>{ruta}</code> · {reemplaza ? "Reemplazar por " : ""}{valor} (según <code>{codigo}</code>)</li>;
                           })}
                         </ul>
                         <button type="button" onClick={() => {

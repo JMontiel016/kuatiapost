@@ -955,9 +955,7 @@ export function camposFaltantes(documento: any, tipo: string) {
         ...((estructura[grupo] || [])[0] || {}),
         ...fila,
       }));
-  const deducibles = new Set(revisarDescripciones(documento, tipo).sugerencias.map(
-    ({ grupo, indice, campo }) => grupo ? `${grupo}.${indice}.${campo}` : campo,
-  ));
+  const { deducibles } = revisarDescripciones(documento, tipo);
   recorrerCampos(revision, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
     if (info.estado === "obligatorio" && estaVacio(valor) && !deducibles.has(ruta))
@@ -1026,11 +1024,13 @@ export type DescripcionSugerida = {
   codigo: string;
   campo: string;
   valor: string;
+  reemplaza: boolean;
 };
 
 export function revisarDescripciones(documento: any, tipo: string) {
   const sugerencias: DescripcionSugerida[] = [];
   const errores: string[] = [];
+  const deducibles = new Set<string>();
   const comprobar = (padre: any, codigo: string, grupo = "", indice?: number) => {
     const regla = parDescripcion(codigo);
     if (!regla || !padre || typeof padre !== "object" || Array.isArray(padre)) return;
@@ -1050,13 +1050,18 @@ export function revisarDescripciones(documento: any, tipo: string) {
     const valor = Object.hasOwn(regla.valores, cod) ? regla.valores[cod] : undefined;
     if (!valor) {
       errores.push(`(${prefijo}${codigo}) Código «${cod}» fuera del catálogo de esta relación.`);
-    } else if (estaVacio(actual)) {
-      sugerencias.push({ grupo, indice, codigo, campo: regla.campo, valor });
-    } else if (typeof actual !== "string" || actual.trim() !== valor) {
-      errores.push(`(${ruta}) Para ${codigo}=${cod} corresponde «${valor}».`);
+      return;
+    }
+    deducibles.add(grupo ? `${grupo}.${indice}.${regla.campo}` : regla.campo);
+    if (typeof actual !== "string" || actual.trim() !== valor) {
+      sugerencias.push({
+        grupo, indice, codigo, campo: regla.campo, valor,
+        reemplaza: !estaVacio(actual) && (typeof actual !== "string" || !!actual.trim()),
+      });
     }
   };
   comprobar(documento, "iTiDE");
+  comprobar(documento, "cPaisRec");
   if (tipo !== "7") comprobar(documento, "iTImp");
   if (Array.isArray(documento.DocumentosAsociados))
     documento.DocumentosAsociados.forEach((fila: any, i: number) => comprobar(fila, "iTipDocAso", "DocumentosAsociados", i));
@@ -1081,11 +1086,13 @@ export function revisarDescripciones(documento: any, tipo: string) {
     if (Array.isArray(documento.Transporte)) documento.Transporte.forEach((fila: any, i: number) => {
       comprobar(fila, "iTipTrans", "Transporte", i);
       comprobar(fila, "iModTrans", "Transporte", i);
+      comprobar(fila, "cPaisDest", "Transporte", i);
+      comprobar(fila, "cNacTrans", "Transporte", i);
       if (String(fila?.iNatTrans) === "2" || !estaVacio(fila?.dDTipIDTrans))
         comprobar(fila, "iTipIDTrans", "Transporte", i);
     });
   }
-  return { sugerencias, errores };
+  return { sugerencias, errores, deducibles };
 }
 
 export function completarDescripciones(documento: any, tipo: string) {
@@ -1210,11 +1217,14 @@ export function validarDocumento(documento: any, tipo: string) {
       errores.push("(dCantProSer) Cantidad: debe ser mayor que cero.");
   });
   errores.push(...relaciones.errores);
+  const rutasDeducibles = new Set([...relaciones.deducibles].map(
+    ruta => !("FormaPago" in documento) ? ruta.replace(/^FormaPago\./, "Pagos.") : ruta,
+  ));
   // Aplica también a JSON pegados o importados, no solo al formulario.
   recorrerCampos(documento, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
     const error = errorFormato(codigo, valor);
-    if (error) errores.push(`(${codigo}) ${info.nombre} [${ruta}]: ${error}`);
+    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${ruta}]: ${error}`);
     if (
       !estaVacio(valor) &&
       info.opciones &&

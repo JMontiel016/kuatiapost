@@ -1,8 +1,15 @@
+import { paises } from "./catalogo-paises";
+
+const nombresPais = Object.fromEntries(paises.map(({ codigo, nombre }) => [codigo, nombre]));
+
 /** Descripciones documentales de SIFEN. Los códigos 9/99 = Otro requieren texto libre.
  * Fuentes: Manual Técnico v150 E012, D209, E607, E622, E502, E504.
  * El usuario nunca debe inventar una descripción para un código estándar.
  */
 export const parejasCodigoDescripcion = {
+  cPaisRec: { campo: "dDesPaisRe", otro: "", valores: nombresPais },
+  cPaisDest: { campo: "dDesPaisDest", otro: "", valores: nombresPais },
+  cNacTrans: { campo: "dDesNacTrans", otro: "", valores: nombresPais },
   iTiDE: { campo: "dDesTiDE", otro: "", valores: {
     "1":"Factura electrónica", "2":"Factura electrónica de exportación", "3":"Factura electrónica de importación",
     "4":"Autofactura electrónica", "5":"Nota de crédito electrónica", "6":"Nota de débito electrónica",

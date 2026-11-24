@@ -33,15 +33,28 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    assert.equal(completado.FormaPago[0].dDesTiPag, 'Efectivo');
    assert.ok(!('Pagos' in completado));
  });
- await ok('las contradicciones, los códigos ausentes y Otro siguen siendo errores', () => {
+ await ok('la descripción contradictoria se sugiere, los códigos ausentes y Otro siguen siendo errores', () => {
    const doc = { iCondOpe: 2, dDCondOpe: 'Contado', dMonEnt: 10, Pagos: [{ iTiPago: 99 }, { dDesTiPag: 'Efectivo' }] };
    const { errores, sugerencias } = revisarDescripciones(doc, '1');
-   assert.ok(errores.some(e => e.includes('dDCondOpe') && e.includes('Crédito')));
+   assert.ok(!errores.some(e => e.includes('dDCondOpe')));
    assert.ok(errores.some(e => e.includes('Pagos[0].dDesTiPag')));
    assert.ok(errores.some(e => e.includes('Pagos[1].iTiPago')));
-   assert.deepEqual(sugerencias, []);
+   assert.ok(sugerencias.some(s => s.campo === 'dDCondOpe' && s.valor === 'Crédito' && s.reemplaza));
    assert.ok(validarDocumento({ iCondOpe: 2, dMonEnt: 10 }, '1').some(e => e.includes('forma de pago de la entrega inicial')));
    assert.deepEqual(validarDocumento({ Pagos: [null] }, '1'), ['(Pagos) Cada ítem debe ser un objeto entre llaves { }.']);
+ });
+ await ok('presencia, país y descripción de identidad deducibles, sin cambiar tipOpe', () => {
+   const doc = { iTiDE: 1, iIndPres: 2, iNatRec: 2, iTiOpe: 4, cPaisRec: 'BRA', iTipIDRec: 1, dDTipIDRec: 'RUC' };
+   const errores = validarDocumento(doc, '1');
+   assert.ok(errores.includes('(tipOpe) Operación: el envío de datos utiliza 1.'));
+   assert.ok(!errores.some(e => /dDesPaisRe|dDTipIDRec|dDesIndPres/.test(e)));
+   const completo = completarDescripciones(doc, '1');
+   assert.equal(completo.dDesPaisRe, 'Brasil');
+   assert.equal(completo.dDTipIDRec, 'Cédula paraguaya');
+   assert.equal(completo.dDesIndPres, 'Operación electrónica');
+   assert.equal(completo.tipOpe, undefined);
+   assert.equal(doc.dDTipIDRec, 'RUC');
+   assert.ok(revisarDescripciones({ cPaisRec: 'ZZZ' }, '1').errores.some(e => e.includes('cPaisRec')));
  });
  await ok('18 departamentos del XLSX',()=>assert.equal(data.departamentos.length,18));
  await ok('272 distritos del XLSX',()=>assert.equal(data.distritos.length,272));
