@@ -9,7 +9,7 @@ const geo=require(path.join(raiz,'lib/documentos/validar-geografia.ts'));
 const {crearPlantilla}=require(path.join(raiz,'lib/documentos/plantillas-documentos.ts'));
 const { revisarDescripciones, completarDescripciones, validarDocumento } = require(path.join(raiz, 'lib/documentos/campos-documentos.ts'));
 const { ordenarJSON, prepararJSONPegado } = require(path.join(raiz, 'lib/integracion/ordenar-json.ts'));
-const { parseObject, quitarComentariosJSON, request } = require(path.join(raiz, 'lib/integracion/solicitudes-integracion.ts'));
+const { parseObject, quitarComentariosJSON, request, revisarTextoJSON } = require(path.join(raiz, 'lib/integracion/solicitudes-integracion.ts'));
 let total=0;
 async function ok(nombre,f){await f();console.log('OK',nombre);total++;}
 async function falla(nombre,f,contiene){await assert.rejects(f,error=>error.message.includes(contiene));console.log('OK',nombre);total++;}
@@ -41,6 +41,34 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    } finally {
      global.fetch = fetchOriginal;
    }
+ });
+ await ok('Revisar detecta campos en blanco, tipo, precisión, caracteres y claves duplicadas', () => {
+   const texto = String.raw`{
+     // comentario válido
+     "tipOpe": "1",
+     "iTiDE": "1",
+     "dEst": "  ",
+     "dPunExp": { "valor": "001" },
+     "dNumDoc": "12345678",
+     "dFeEmiDE": "2026-11-24T24:00:00",
+     "dNomRec": "Cliente\u0001",
+     "personalizado": ["texto\uFFFD", "\uD800", "Paraguay 🇵🇾"],
+     "Detalles": [{ "dCantProSer": 1.000000000, "dCodInt": "a", "dCodInt": "b" }]
+   }`;
+   const doc = parseObject(texto);
+   const textoRevisado = revisarTextoJSON(texto);
+   const errores = validarDocumento(doc, '1', textoRevisado.numeros);
+   assert.ok(errores.some(e => /dEst.*falta completar/.test(e)));
+   assert.ok(errores.some(e => /dPunExp.*Debe contener texto o un número/.test(e)));
+   assert.ok(errores.some(e => /dNumDoc.*7/.test(e)));
+   assert.ok(errores.some(e => /dFeEmiDE.*AAAA/.test(e)));
+   assert.ok(errores.some(e => /Detalles\[0\]\.dCantProSer.*8 decimales/.test(e)));
+   assert.ok(textoRevisado.errores.some(e => /dNomRec.*no válido para XML/.test(e)));
+   assert.ok(textoRevisado.errores.some(e => /personalizado\[0\].*reemplazo/.test(e)));
+   assert.ok(textoRevisado.errores.some(e => /personalizado\[1\].*no válido para XML/.test(e)));
+   assert.ok(!textoRevisado.errores.some(e => /personalizado\[2\]/.test(e)));
+   assert.ok(textoRevisado.errores.some(e => /Detalles\[0\]\.dCodInt.*Clave repetida.*línea/.test(e)));
+   assert.throws(() => parseObject('{"a": 1,\n "b": }'), /línea 2, columna/);
  });
  await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
    const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };

@@ -35,6 +35,7 @@ import {
   pointer,
   safeUrl,
   request,
+  revisarTextoJSON,
 } from "../../lib/integracion/solicitudes-integracion";
 import {
   validarDocumento as validateDocument,
@@ -376,15 +377,19 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   async function sendRequest() {
     await attempt(async () => {
       const data = parseObject(body);
+      const textoRevisado = revisarTextoJSON(body);
+      const problemas = mode === "emit"
+        ? [...textoRevisado.errores, ...validateDocument(data, type, textoRevisado.numeros)]
+        : textoRevisado.errores;
+      if (problemas.length) {
+        setErrors(problemas);
+        setNotice("Corregí los problemas indicados antes de enviar.", "warning");
+        return;
+      }
       if (!token.trim())
         throw Error("Generá o ingresá el token en Configuración.");
       if (mode === "emit") {
-        const problems = validateDocument(data, type);
-        setErrors(problems);
-        if (problems.length) {
-          setNotice("Completá los campos indicados antes de enviar.", "warning");
-          return;
-        }
+        setErrors([]);
         const pendientes = revisarDescripciones(data, type).sugerencias.length;
         const aviso = pendientes
           ? "\n\nHay descripciones pendientes de completar o ajustar. Confirmá solo si tu integración las genera a partir de los códigos."
@@ -858,13 +863,17 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                           const tipoRevision = mode === "emit" ? type : String(p.iTiDE || "");
                           // Verificar la estructura antes de recorrer filas evita errores
                           // técnicos si un grupo fue escrito como objeto o como texto.
-                          const problemas: string[] = [];
+                          const textoRevisado = revisarTextoJSON(body);
+                          const problemas = [...textoRevisado.errores];
                           if (String(p.tipOpe) === "1" && !["1","4","5","6","7"].includes(tipoRevision)) problemas.push("(iTiDE) Para emitir informá un tipo reconocido: 1, 4, 5, 6 o 7.");
-                          for (const grupo of ["Detalles", "Pagos", "Subtotales", "DocumentosAsociados"]) {
-                            if (grupo in p && !Array.isArray(p[grupo])) problemas.push(`(${grupo}) Debe ser una lista entre corchetes [ ].`);
-                            else if (Array.isArray(p[grupo]) && p[grupo].some((fila:any)=>!fila || typeof fila !== "object" || Array.isArray(fila))) problemas.push(`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`);
+                          if (["1","4","5","6","7"].includes(tipoRevision)) {
+                            problemas.push(...validateDocument(p, tipoRevision, textoRevisado.numeros));
+                          } else {
+                            for (const grupo of ["Detalles", "Pagos", "Subtotales", "DocumentosAsociados"]) {
+                              if (grupo in p && !Array.isArray(p[grupo])) problemas.push(`(${grupo}) Debe ser una lista entre corchetes [ ].`);
+                              else if (Array.isArray(p[grupo]) && p[grupo].some((fila:any)=>!fila || typeof fila !== "object" || Array.isArray(fila))) problemas.push(`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`);
+                            }
                           }
-                          if (!problemas.length && ["1","4","5","6","7"].includes(tipoRevision)) problemas.push(...validateDocument(p,tipoRevision));
                           if (p.gCamItem && !p.Detalles) problemas.push("(gCamItem) La plantilla de envío usa Detalles para la lista de productos. Confirmá la clave que espera tu integración.");
                           setErrors(problemas);
                         } catch (error:any) { setErrors([error.message || "El JSON no es válido."]); }

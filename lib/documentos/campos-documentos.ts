@@ -1,4 +1,4 @@
-import { errorFormato } from "./formatos-campos";
+import { errorFormato, formatoCampo } from "./formatos-campos";
 import { crearPlantilla } from "./plantillas-documentos";
 import { parDescripcion } from "./descripcion-codigos";
 
@@ -490,7 +490,7 @@ const opciones: Record<string, [string, string][]> = {
 
 // Distingue vacío de cero: el valor 0 puede ser obligatorio y válido.
 export const estaVacio = (valor: unknown) =>
-  valor === "" || valor === null || valor === undefined;
+  valor === null || valor === undefined || (typeof valor === "string" && !valor.trim());
 
 /** Devuelve el estado actual del campo considerando los datos ya elegidos. */
 export function informacionCampo(
@@ -921,13 +921,13 @@ export function recorrerCampos(
   ) => void,
 ) {
   for (const [codigo, valor] of Object.entries(documento)) {
-    if (Array.isArray(valor))
+    if (Array.isArray(valor) && !formatoCampo(codigo))
       valor.forEach((fila, i) => {
         if (fila && typeof fila === "object")
           for (const [campo, dato] of Object.entries(fila))
             visitar(campo, dato, `${codigo}.${i}.${campo}`, fila, codigo);
       });
-    else if (typeof valor !== "object" || valor === null)
+    else if (typeof valor !== "object" || valor === null || formatoCampo(codigo))
       visitar(codigo, valor, codigo, documento, "");
   }
 }
@@ -1105,7 +1105,7 @@ export function completarDescripciones(documento: any, tipo: string) {
 }
 
 /** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
-export function validarDocumento(documento: any, tipo: string) {
+export function validarDocumento(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
   const estructura = ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega"].flatMap(grupo => {
     if (!(grupo in documento)) return [];
     const filas = documento[grupo];
@@ -1116,12 +1116,13 @@ export function validarDocumento(documento: any, tipo: string) {
   });
   if (estructura.length) return estructura;
   const relaciones = revisarDescripciones(documento, tipo);
-  if (["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago)) {
+  const usaFormaPago = ["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago);
+  if (usaFormaPago) {
     const { FormaPago, ...resto } = documento;
     documento = { ...resto, Pagos: FormaPago };
   }
   const errores = camposFaltantes(documento, tipo).map(
-    (f) => `(${f.codigo}) ${f.nombre}: falta completar. ${f.motivo}`,
+    (f) => `(${f.codigo}) ${f.nombre} [${usaFormaPago ? f.ruta.replace(/^Pagos\./, "FormaPago.") : f.ruta}]: falta completar. ${f.motivo}`,
   );
   if (String(documento.iTiOpe) === "4" && (String(documento.iNatRec) !== "2" || documento.cPaisRec === "PRY")) errores.push("Servicios al exterior: elegí No contribuyente y un país diferente de PRY.");
   if (documento.iTiOpe && String(documento.iTiOpe) !== "4" && documento.cPaisRec !== "PRY") errores.push("(cPaisRec) Para esta operación seleccioná Paraguay (PRY).");
@@ -1146,37 +1147,12 @@ export function validarDocumento(documento: any, tipo: string) {
     if (String(pago.iTiPago) !== "2" && (pago.dNumCheq || pago.dBcoEmi)) errores.push("Datos de cheque: solo corresponden cuando la forma de pago es Cheque (2).");
     if (!["3","4"].includes(String(pago.iTiPago)) && (pago.iDenTarj || pago.iForProPa || pago.dNumTarj)) errores.push("Datos de tarjeta: solo corresponden a crédito (3) o débito (4).");
   }
-  for (const [codigo, digitos] of [
-    ["dEst", 3],
-    ["dPunExp", 3],
-    ["dNumDoc", 7],
-  ] as const)
-    if (
-      !estaVacio(documento[codigo]) &&
-      !new RegExp(`^\\d{${digitos}}$`).test(String(documento[codigo]))
-    )
-      errores.push(
-        `(${codigo}) ${informacionCampo(codigo, documento, tipo).nombre}: debe tener ${digitos} dígitos.`,
-      );
   if (estaVacio(documento.iTiDE) && estaVacio(documento.dDesTiDE))
     errores.push("(iTiDE) Informá el código del tipo de documento.");
   if (!estaVacio(documento.iTiDE) && String(documento.iTiDE) !== tipo)
     errores.push(
       "(iTiDE) Tipo de operación: no coincide con el registro seleccionado.",
     );
-  if (documento.dFeEmiDE) {
-    const s = String(documento.dFeEmiDE);
-    const fecha = new Date(s.slice(0, 10) + "T00:00:00Z");
-    if (
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s) ||
-      Number.isNaN(Date.parse(s)) ||
-      Number.isNaN(fecha.getTime()) ||
-      fecha.toISOString().slice(0, 10) !== s.slice(0, 10)
-    )
-      errores.push(
-        "(dFeEmiDE) Fecha y hora: usá una fecha válida AAAA-MM-DDThh:mm:ss.",
-      );
-  }
   if (!Array.isArray(documento.Detalles) || !documento.Detalles.length)
     errores.push("Productos y servicios: agregá al menos un ítem.");
   if (
@@ -1190,32 +1166,6 @@ export function validarDocumento(documento: any, tipo: string) {
       !documento.DocumentosAsociados.length)
   )
     errores.push("Registro asociado: indicá la factura que origina la nota.");
-  recorrerCampos(documento, (codigo, valor, _ruta, fila, grupo) => {
-    if (
-      codigo === "dCdCDERef" &&
-      !estaVacio(valor) &&
-      !/^\d{44}$/.test(String(valor))
-    )
-      errores.push("(dCdCDERef) CDC asociado: debe tener 44 dígitos.");
-    if (
-      grupo === "Detalles" &&
-      !estaVacio(valor) &&
-      [
-        "dCantProSer",
-        "dPUniProSer",
-        "dTotOpeItem",
-        "dBasGravIVA",
-        "dLiqIVAItem",
-        "dBaseExe",
-      ].includes(codigo) &&
-      !/^\d+(\.\d{1,8})?$/.test(String(valor))
-    )
-      errores.push(
-        `(${codigo}) ${informacionCampo(codigo, documento, tipo, fila, grupo).nombre}: usá decimales sin separadores de miles.`,
-      );
-    if (codigo === "dCantProSer" && !estaVacio(valor) && Number(valor) <= 0)
-      errores.push("(dCantProSer) Cantidad: debe ser mayor que cero.");
-  });
   errores.push(...relaciones.errores);
   const rutasDeducibles = new Set([...relaciones.deducibles].map(
     ruta => !("FormaPago" in documento) ? ruta.replace(/^FormaPago\./, "Pagos.") : ruta,
@@ -1223,15 +1173,21 @@ export function validarDocumento(documento: any, tipo: string) {
   // Aplica también a JSON pegados o importados, no solo al formulario.
   recorrerCampos(documento, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
-    const error = errorFormato(codigo, valor);
-    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${ruta}]: ${error}`);
+    const grupoOriginal = usaFormaPago && grupo === "Pagos" ? "FormaPago" : grupo;
+    const indice = grupo ? Number(ruta.split(".")[1]) : -1;
+    const clave = JSON.stringify(grupo ? [grupoOriginal, indice, codigo] : [codigo]);
+    const original = typeof valor === "number" ? numeros?.get(clave) : undefined;
+    const dato = original && !/[eE]/.test(original) ? original : valor;
+    const error = errorFormato(codigo, dato);
+    const rutaVisible = grupo ? `${grupoOriginal}[${indice}].${codigo}` : ruta;
+    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error}`);
     if (
       !estaVacio(valor) &&
       info.opciones &&
       !info.opciones.some(([opcion]) => opcion === String(valor))
     )
       errores.push(
-        `(${codigo}) ${info.nombre}: seleccioná una opción del catálogo.`,
+        `(${codigo}) ${info.nombre} [${rutaVisible}]: seleccioná una opción del catálogo.`,
       );
     if (
       grupo === "Detalles" &&

@@ -872,10 +872,10 @@ export function descripcionFormato(codigo: string) {
 /** Revisa datos sin recortar nombres o eliminar caracteres silenciosamente. */
 export function errorFormato(codigo: string, valor: unknown): string {
   if (valor === "" || valor == null) return "";
-  if (typeof valor !== "string" && typeof valor !== "number")
-    return "Debe contener texto o un número, no un objeto.";
   const f = formatoCampo(codigo);
   if (!f) return "";
+  if (typeof valor !== "string" && typeof valor !== "number")
+    return "Debe contener texto o un número.";
   const texto = String(valor);
   // El propio Manual v150 (E504) contiene una excepción contradictoria:
   // fija longitud 20-36 pero la descripción oficial del código 1 es
@@ -887,7 +887,7 @@ export function errorFormato(codigo: string, valor: unknown): string {
   if (f.tipo === "fecha" || f.tipo === "fecha-dia") {
     const patron =
       f.tipo === "fecha"
-        ? /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+        ? /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
         : /^\d{4}-\d{2}-\d{2}$/;
     const fecha = new Date(texto.slice(0, 10) + "T00:00:00Z");
     if (
@@ -903,10 +903,15 @@ export function errorFormato(codigo: string, valor: unknown): string {
     const patron = new RegExp(
       `^\\d{${f.minimo},${f.maximo}}${f.decimales ? `(\\.\\d{1,${f.decimales}})?` : ""}$`,
     );
-    if (!patron.test(texto)) return descripcionFormato(codigo);
+    if (!patron.test(texto)) {
+      const partes = /^(\d+)(?:\.(\d+))?$/.exec(texto);
+      return partes
+        ? `${descripcionFormato(codigo)} Recibido: ${partes[1].length} dígitos enteros y ${partes[2]?.length ?? 0} decimales.`
+        : `${descripcionFormato(codigo)} Hay caracteres fuera del formato numérico.`;
+    }
   } else {
     const largo = [...texto].length;
-    if (largo < f.minimo || largo > f.maximo) return descripcionFormato(codigo);
+    if (largo < f.minimo || largo > f.maximo) return `${descripcionFormato(codigo)} Recibido: ${largo} caracteres.`;
     if (f.tipo === "letras" && !/^[A-Z]+$/.test(texto))
       return descripcionFormato(codigo);
   }

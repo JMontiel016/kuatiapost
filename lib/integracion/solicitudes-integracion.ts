@@ -1,5 +1,5 @@
 /** Utilidades JSON y solicitudes GET/POST a la URL de integración elegida por la persona. */
-import { createScanner } from "jsonc-parser";
+import { createScanner, visit } from "jsonc-parser";
 
 /** Formatea el JSON para que sea fácil de leer y editar. */
 export const pretty = (v: any) => JSON.stringify(v, null, 2);
@@ -24,7 +24,15 @@ export function quitarComentariosJSON(text: string) {
 export function parseObject(text: string) {
   let v: any;
   try { v = JSON.parse(quitarComentariosJSON(text)); }
-  catch { throw Error("JSON inválido: revisá comillas dobles, comas y el cierre de llaves o corchetes. Conservamos el texto para que puedas corregirlo."); }
+  catch {
+    let ubicacion = "";
+    visit(quitarComentariosJSON(text), {
+      onError(_error, _offset, _largo, linea, columna) {
+        ubicacion ||= ` en la línea ${linea + 1}, columna ${columna + 1}`;
+      },
+    }, { disallowComments: true });
+    throw Error(`JSON inválido${ubicacion}: revisá comillas dobles, comas y el cierre de llaves o corchetes. Conservamos el texto para que puedas corregirlo.`);
+  }
   // Evita claves especiales que podrían modificar prototipos al importar datos.
   const revisar = (objeto: any) => {
     if (!objeto || typeof objeto !== "object") return;
@@ -37,6 +45,39 @@ export function parseObject(text: string) {
   if (!v || Array.isArray(v) || typeof v !== "object")
     throw Error("La solicitud debe ser un objeto JSON.");
   return v;
+}
+
+/** Examina el texto original, antes de perder claves repetidas o decimales escritos. */
+export function revisarTextoJSON(texto: string) {
+  const errores: string[] = [];
+  const numeros = new Map<string, string>();
+  const objetos: Set<string>[] = [];
+  const mostrarRuta = (ruta: (string | number)[]) => ruta.reduce<string>((s, p) =>
+    typeof p === "number" ? `${s}[${p}]` : s ? `${s}.${p}` : p, "");
+  const caracteresInvalidos = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFE\uFFFF]/u;
+  const revisarCaracteres = (valor: string, ruta: (string | number)[], linea: number, columna: number) => {
+    const ubicacion = `[${mostrarRuta(ruta)}] (línea ${linea + 1}, columna ${columna + 1})`;
+    if (caracteresInvalidos.test(valor)) errores.push(`${ubicacion}: contiene un carácter no válido para XML.`);
+    if (valor.includes("\uFFFD")) errores.push(`${ubicacion}: contiene el carácter de reemplazo �. Revisá la codificación del texto de origen.`);
+  };
+  visit(texto, {
+    onObjectBegin() { objetos.push(new Set()); },
+    onObjectEnd() { objetos.pop(); },
+    onObjectProperty(clave, _offset, _largo, linea, columna, ruta) {
+      const claves = objetos.at(-1);
+      const campo = [...ruta(), clave];
+      if (claves?.has(clave)) errores.push(`[${mostrarRuta(campo)}] Clave repetida (línea ${linea + 1}, columna ${columna + 1}).`);
+      claves?.add(clave);
+      revisarCaracteres(clave, campo, linea, columna);
+    },
+    onLiteralValue(valor, offset, largo, linea, columna, ruta) {
+      if (typeof valor === "string") revisarCaracteres(valor, ruta(), linea, columna);
+      if (typeof valor !== "number") return;
+      if (!Number.isFinite(valor)) errores.push(`[${mostrarRuta(ruta())}] Número fuera del rango admitido (línea ${linea + 1}, columna ${columna + 1}).`);
+      numeros.set(JSON.stringify(ruta()), texto.slice(offset, offset + largo));
+    },
+  });
+  return { errores, numeros };
 }
 
 /** Obtiene un dato de la respuesta por una ruta como data.estado. */
