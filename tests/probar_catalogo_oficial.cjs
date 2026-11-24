@@ -7,6 +7,7 @@ const TS=(()=>{try{return require(path.join(raiz,'node_modules/typescript'));}ca
 require.extensions['.ts']=(m,file)=>{const src=TS.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,compilerOptions:{module:TS.ModuleKind.CommonJS,target:TS.ScriptTarget.ES2022,resolveJsonModule:true,esModuleInterop:true}}).outputText;m._compile(src,file);};
 const geo=require(path.join(raiz,'lib/documentos/validar-geografia.ts'));
 const {crearPlantilla}=require(path.join(raiz,'lib/documentos/plantillas-documentos.ts'));
+const { revisarDescripciones, completarDescripciones, validarDocumento } = require(path.join(raiz, 'lib/documentos/campos-documentos.ts'));
 let total=0;
 async function ok(nombre,f){await f();console.log('OK',nombre);total++;}
 async function falla(nombre,f,contiene){await assert.rejects(f,error=>error.message.includes(contiene));console.log('OK',nombre);total++;}
@@ -14,6 +15,34 @@ const dis=new Map(data.distritos.map(([c,d,n])=>[c,{d,n}]));
 const ciudad=new Map(data.ciudades.map(([c,d,n])=>[c,{d,n}]));
 const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:String(c)});
 (async()=>{
+ await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
+   const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };
+   const revision = revisarDescripciones(doc, '1');
+   assert.deepEqual(revision.errores, []);
+   assert.ok(revision.sugerencias.some(p => p.campo === 'dDCondOpe' && p.valor === 'Contado'));
+   assert.ok(!validarDocumento(doc, '1').some(error => /dDCondOpe|dDesTiPag/.test(error)));
+   const completo = completarDescripciones(doc, '1');
+   assert.equal(completo.dDCondOpe, 'Contado');
+   assert.equal(completo.Pagos[0].dDesTiPag, 'Efectivo');
+   assert.equal(completo.Pagos[1].dDesTiPag, 'Transferencia');
+   assert.equal(doc.dDCondOpe, undefined);
+   assert.equal(doc.Pagos[0].dDesTiPag, undefined);
+   const alternativo = { iTiDE: 1, iCondOpe: 1, FormaPago: [{ iTiPago: 1 }] };
+   assert.ok(!validarDocumento(alternativo, '1').some(error => /al menos una forma de pago|dDesTiPag/.test(error)));
+   const completado = completarDescripciones(alternativo, '1');
+   assert.equal(completado.FormaPago[0].dDesTiPag, 'Efectivo');
+   assert.ok(!('Pagos' in completado));
+ });
+ await ok('las contradicciones, los códigos ausentes y Otro siguen siendo errores', () => {
+   const doc = { iCondOpe: 2, dDCondOpe: 'Contado', dMonEnt: 10, Pagos: [{ iTiPago: 99 }, { dDesTiPag: 'Efectivo' }] };
+   const { errores, sugerencias } = revisarDescripciones(doc, '1');
+   assert.ok(errores.some(e => e.includes('dDCondOpe') && e.includes('Crédito')));
+   assert.ok(errores.some(e => e.includes('Pagos[0].dDesTiPag')));
+   assert.ok(errores.some(e => e.includes('Pagos[1].iTiPago')));
+   assert.deepEqual(sugerencias, []);
+   assert.ok(validarDocumento({ iCondOpe: 2, dMonEnt: 10 }, '1').some(e => e.includes('forma de pago de la entrega inicial')));
+   assert.deepEqual(validarDocumento({ Pagos: [null] }, '1'), ['(Pagos) Cada ítem debe ser un objeto entre llaves { }.']);
+ });
  await ok('18 departamentos del XLSX',()=>assert.equal(data.departamentos.length,18));
  await ok('272 distritos del XLSX',()=>assert.equal(data.distritos.length,272));
  await ok('6.766 ciudades/localidades del XLSX',()=>assert.equal(data.ciudades.length,6766));

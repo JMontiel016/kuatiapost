@@ -798,16 +798,17 @@ export function informacionCampo(
     );
   if (grupo === "Pagos") {
     const contado = String(documento.iCondOpe) === "1";
+    const pagoRequerido = contado || (String(documento.iCondOpe) === "2" && Number(documento.dMonEnt) > 0) || !estaVacio(fila.iTiPago);
     const tarjeta = ["3","4"].includes(String(fila.iTiPago));
-    if (["dNumCheq","dBcoEmi"].includes(codigo)) return condicion(contado && String(fila.iTiPago) === "2", true, "Completá el número de cheque de 8 caracteres y el banco emisor.");
-    if (codigo === "dDesTiPag") return condicion(contado && !estaVacio(fila.iTiPago), !estaVacio(documento.iCondOpe) && (!contado || !estaVacio(fila.iTiPago)), "Se completa desde el tipo de pago; si elegís Otro, indicá el tipo de pago manualmente.", "Manual v150, E607");
-    if (["iDenTarj","iForProPa"].includes(codigo)) return condicion(contado && tarjeta, true, "Seleccioná la marca y el procesamiento del pago con tarjeta.");
-    if (codigo === "dDesDenTarj") return condicion(contado && tarjeta && !estaVacio(fila.iDenTarj), !estaVacio(fila.iTiPago) && (!tarjeta || !estaVacio(fila.iDenTarj)), "Se completa desde la denominación de tarjeta; si elegís Otro, escribí la marca.", "Manual v150, E622");
+    if (["dNumCheq","dBcoEmi"].includes(codigo)) return condicion(pagoRequerido && String(fila.iTiPago) === "2", true, "Completá el número de cheque de 8 caracteres y el banco emisor.");
+    if (codigo === "dDesTiPag") return condicion(pagoRequerido && !estaVacio(fila.iTiPago), !estaVacio(documento.iCondOpe) && (!contado || !estaVacio(fila.iTiPago)), "Se completa desde el tipo de pago; si elegís Otro, indicá el tipo de pago manualmente.", "Manual v150, E607");
+    if (["iDenTarj","iForProPa"].includes(codigo)) return condicion(pagoRequerido && tarjeta, true, "Seleccioná la marca y el procesamiento del pago con tarjeta.");
+    if (codigo === "dDesDenTarj") return condicion(pagoRequerido && tarjeta && !estaVacio(fila.iDenTarj), !estaVacio(fila.iTiPago) && (!tarjeta || !estaVacio(fila.iDenTarj)), "Se completa desde la denominación de tarjeta; si elegís Otro, escribí la marca.", "Manual v150, E622");
     if (["dRSProTar","dRUCProTar","dDVProTar","dCodAuOpe","dNomTit","dNumTarj"].includes(codigo)) return opcional("Dato adicional del pago con tarjeta, si corresponde. Nunca informes el número completo ni el código de seguridad.");
 
     if (codigo === "dTiCamTiPag")
       return condicion(
-        String(documento.iCondOpe) === "1" &&
+        pagoRequerido &&
           fila.cMoneTiPag &&
           fila.cMoneTiPag !== "PYG",
         !estaVacio(documento.iCondOpe) && !estaVacio(fila.cMoneTiPag),
@@ -815,9 +816,9 @@ export function informacionCampo(
         "Manual v150, E611",
       );
     return condicion(
-      String(documento.iCondOpe) === "1",
+      pagoRequerido,
       !estaVacio(documento.iCondOpe),
-      "Se requiere si la venta es al contado.",
+      "Se requiere para el pago al contado o la entrega inicial informada.",
       "Manual v150, E605–E609",
     );
   }
@@ -942,6 +943,11 @@ export function camposFaltantes(documento: any, tipo: string) {
   }[] = [];
   // Combina la estructura mínima y los datos para detectar incluso claves eliminadas.
   const estructura = crearPlantilla(tipo) as any;
+  const usaFormaPago = !("Pagos" in documento) && Array.isArray(documento.FormaPago) && "Pagos" in estructura;
+  if (usaFormaPago) {
+    const { FormaPago, ...resto } = documento;
+    documento = { ...resto, Pagos: FormaPago };
+  }
   const revision = { ...estructura, ...documento };
   for (const [grupo, filas] of Object.entries(documento))
     if (Array.isArray(filas))
@@ -949,11 +955,14 @@ export function camposFaltantes(documento: any, tipo: string) {
         ...((estructura[grupo] || [])[0] || {}),
         ...fila,
       }));
+  const deducibles = new Set(revisarDescripciones(documento, tipo).sugerencias.map(
+    ({ grupo, indice, campo }) => grupo ? `${grupo}.${indice}.${campo}` : campo,
+  ));
   recorrerCampos(revision, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
-    if (info.estado === "obligatorio" && estaVacio(valor))
+    if (info.estado === "obligatorio" && estaVacio(valor) && !deducibles.has(ruta))
       faltantes.push({
-        ruta,
+        ruta: usaFormaPago ? ruta.replace(/^Pagos\./, "FormaPago.") : ruta,
         codigo,
         nombre: info.nombre,
         motivo: info.motivo,
@@ -1011,14 +1020,107 @@ export function vaciarCamposOpcionales(documento: any, tipo: string) {
   return copia;
 }
 
+export type DescripcionSugerida = {
+  grupo: string;
+  indice?: number;
+  codigo: string;
+  campo: string;
+  valor: string;
+};
+
+export function revisarDescripciones(documento: any, tipo: string) {
+  const sugerencias: DescripcionSugerida[] = [];
+  const errores: string[] = [];
+  const comprobar = (padre: any, codigo: string, grupo = "", indice?: number) => {
+    const regla = parDescripcion(codigo);
+    if (!regla || !padre || typeof padre !== "object" || Array.isArray(padre)) return;
+    const prefijo = grupo ? `${grupo}[${indice}].` : "";
+    const ruta = `${prefijo}${regla.campo}`;
+    const actual = padre[regla.campo];
+    if (estaVacio(padre[codigo])) {
+      if (!estaVacio(actual)) errores.push(`(${prefijo}${codigo}) Informá el código correspondiente a ${ruta}.`);
+      return;
+    }
+    const cod = String(padre[codigo]);
+    if (regla.otro && cod === regla.otro) {
+      if (estaVacio(actual) || typeof actual !== "string" || /^(otro|otros|otra|otras)$/i.test(actual.trim()))
+        errores.push(`(${ruta}) Para ${codigo}=${cod}, escribí la descripción concreta.`);
+      return;
+    }
+    const valor = Object.hasOwn(regla.valores, cod) ? regla.valores[cod] : undefined;
+    if (!valor) {
+      errores.push(`(${prefijo}${codigo}) Código «${cod}» fuera del catálogo de esta relación.`);
+    } else if (estaVacio(actual)) {
+      sugerencias.push({ grupo, indice, codigo, campo: regla.campo, valor });
+    } else if (typeof actual !== "string" || actual.trim() !== valor) {
+      errores.push(`(${ruta}) Para ${codigo}=${cod} corresponde «${valor}».`);
+    }
+  };
+  comprobar(documento, "iTiDE");
+  if (tipo !== "7") comprobar(documento, "iTImp");
+  if (Array.isArray(documento.DocumentosAsociados))
+    documento.DocumentosAsociados.forEach((fila: any, i: number) => comprobar(fila, "iTipDocAso", "DocumentosAsociados", i));
+  if (["5", "6"].includes(tipo)) comprobar(documento, "iMotEmi");
+  if (tipo === "1") comprobar(documento, "iIndPres");
+  if (String(documento.iNatRec) === "2" || (!estaVacio(documento.dDTipIDRec) && estaVacio(documento.iNatRec)))
+    comprobar(documento, "iTipIDRec");
+  if (["1", "4"].includes(tipo)) {
+    comprobar(documento, "iCondOpe");
+    for (const grupo of ["Pagos", "FormaPago"]) {
+      if (!Array.isArray(documento[grupo])) continue;
+      documento[grupo].forEach((pago: any, i: number) => {
+        comprobar(pago, "iTiPago", grupo, i);
+        if (["3", "4"].includes(String(pago?.iTiPago)) || !estaVacio(pago?.dDesDenTarj))
+          comprobar(pago, "iDenTarj", grupo, i);
+      });
+    }
+  }
+  if (tipo === "7") {
+    comprobar(documento, "iMotEmiNR");
+    comprobar(documento, "iRespEmiNR");
+    if (Array.isArray(documento.Transporte)) documento.Transporte.forEach((fila: any, i: number) => {
+      comprobar(fila, "iTipTrans", "Transporte", i);
+      comprobar(fila, "iModTrans", "Transporte", i);
+      if (String(fila?.iNatTrans) === "2" || !estaVacio(fila?.dDTipIDTrans))
+        comprobar(fila, "iTipIDTrans", "Transporte", i);
+    });
+  }
+  return { sugerencias, errores };
+}
+
+export function completarDescripciones(documento: any, tipo: string) {
+  const resultado = structuredClone(documento);
+  for (const { grupo, indice, campo, valor } of revisarDescripciones(documento, tipo).sugerencias) {
+    const padre = grupo && indice !== undefined ? resultado[grupo][indice] : resultado;
+    padre[campo] = valor;
+  }
+  return resultado;
+}
+
 /** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
 export function validarDocumento(documento: any, tipo: string) {
+  const estructura = ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega"].flatMap(grupo => {
+    if (!(grupo in documento)) return [];
+    const filas = documento[grupo];
+    if (!Array.isArray(filas)) return [`(${grupo}) Debe ser una lista entre corchetes [ ].`];
+    if (filas.some(fila => !fila || typeof fila !== "object" || Array.isArray(fila)))
+      return [`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`];
+    return [];
+  });
+  if (estructura.length) return estructura;
+  const relaciones = revisarDescripciones(documento, tipo);
+  if (["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago)) {
+    const { FormaPago, ...resto } = documento;
+    documento = { ...resto, Pagos: FormaPago };
+  }
   const errores = camposFaltantes(documento, tipo).map(
     (f) => `(${f.codigo}) ${f.nombre}: falta completar. ${f.motivo}`,
   );
   if (String(documento.iTiOpe) === "4" && (String(documento.iNatRec) !== "2" || documento.cPaisRec === "PRY")) errores.push("Servicios al exterior: elegí No contribuyente y un país diferente de PRY.");
   if (documento.iTiOpe && String(documento.iTiOpe) !== "4" && documento.cPaisRec !== "PRY") errores.push("(cPaisRec) Para esta operación seleccioná Paraguay (PRY).");
   if (tipo === "4" && (String(documento.iNatRec) !== "1" || String(documento.iTiOpe) !== "2")) errores.push("Autofactura: el receptor debe ser contribuyente y la operación B2C (2).");
+  if (tipo === "4" && !estaVacio(documento.iCondOpe) && String(documento.iCondOpe) !== "1")
+    errores.push("(iCondOpe) En una autofactura informá Contado (1), según E601.");
   // NT 023: identificación innominada únicamente para B2C, nunca en NC/ND/NR.
   if (String(documento.iTipIDRec) === "5") {
     if (["5", "6", "7"].includes(tipo)) errores.push("(iTipIDRec) Innominado no está permitido en nota de crédito, nota de débito o nota de remisión (NT 023, D208e).");
@@ -1028,7 +1130,11 @@ export function validarDocumento(documento: any, tipo: string) {
   if (String(documento.iNatRec) === "2") for (const k of ["iTiContRec","dRucRec","dDVRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a un receptor no contribuyente. Retirá este dato.`);
   if (String(documento.iNatRec) === "1") for (const k of ["iTipIDRec","dDTipIDRec","dNumIDRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a esta selección del receptor. Retirá este dato.`);
 
-  if (["1","4"].includes(tipo) && String(documento.iCondOpe) === "1" && (!Array.isArray(documento.Pagos) || !documento.Pagos.length)) errores.push("Venta al contado: agregá al menos una forma de pago.");
+  if (["1","4"].includes(tipo) && !documento.Pagos?.length) {
+    if (String(documento.iCondOpe) === "1") errores.push("Venta al contado: agregá al menos una forma de pago.");
+    if (String(documento.iCondOpe) === "2" && Number(documento.dMonEnt) > 0)
+      errores.push("(Pagos) Informá la forma de pago de la entrega inicial.");
+  }
   for (const pago of documento.Pagos || []) {
     if (String(pago.iTiPago) !== "2" && (pago.dNumCheq || pago.dBcoEmi)) errores.push("Datos de cheque: solo corresponden cuando la forma de pago es Cheque (2).");
     if (!["3","4"].includes(String(pago.iTiPago)) && (pago.iDenTarj || pago.iForProPa || pago.dNumTarj)) errores.push("Datos de tarjeta: solo corresponden a crédito (3) o débito (4).");
@@ -1045,6 +1151,8 @@ export function validarDocumento(documento: any, tipo: string) {
       errores.push(
         `(${codigo}) ${informacionCampo(codigo, documento, tipo).nombre}: debe tener ${digitos} dígitos.`,
       );
+  if (estaVacio(documento.iTiDE) && estaVacio(documento.dDesTiDE))
+    errores.push("(iTiDE) Informá el código del tipo de documento.");
   if (!estaVacio(documento.iTiDE) && String(documento.iTiDE) !== tipo)
     errores.push(
       "(iTiDE) Tipo de operación: no coincide con el registro seleccionado.",
@@ -1101,42 +1209,10 @@ export function validarDocumento(documento: any, tipo: string) {
     if (codigo === "dCantProSer" && !estaVacio(valor) && Number(valor) <= 0)
       errores.push("(dCantProSer) Cantidad: debe ser mayor que cero.");
   });
-  // Revisión de pares código/descripcion incluso en JSON importado o pegado.
-  // El grupo correcto evita confundir datos del receptor con los del emisor.
-  const comprobarPar = (padre: any, codigo: string, ruta: string, activo = true) => {
-    if (!activo || !padre) return;
-    const regla = parDescripcion(codigo);
-    if (!regla || estaVacio(padre[codigo])) return;
-    const cod = String(padre[codigo]);
-    const actual = String(padre[regla.campo] ?? "").trim();
-    const esperado = regla.valores[cod];
-    if (esperado && actual !== esperado)
-      errores.push(`(${regla.campo}) ${ruta}: para el código ${cod} corresponde exactamente «${esperado}».`);
-    if (regla.otro && cod === regla.otro && (!actual || /^(otro|otros|otra|otras)$/i.test(actual)))
-      errores.push(`(${regla.campo}) ${ruta}: escribí una descripción concreta para Otro.`);
-  };
-  comprobarPar(documento, "iMotEmi", "motivo NC/ND", ["5","6"].includes(tipo));
-  comprobarPar(documento, "iCondOpe", "condición contado/crédito", ["1","4"].includes(tipo));
-  if (tipo === "7" && Array.isArray(documento.Transporte)) {
-    for (const [i,transporte] of documento.Transporte.entries()) {
-      comprobarPar(transporte,"iTipTrans",`Transporte.${i}`);
-      comprobarPar(transporte,"iModTrans",`Transporte.${i}`);
-      comprobarPar(transporte,"iTipIDTrans",`Transporte.${i}`,String(transporte.iNatTrans)==="2");
-    }
-  }
-  comprobarPar(documento, "iIndPres", "presencia", tipo === "1");
-  comprobarPar(documento, "iTipIDRec", "identificación del receptor", String(documento.iNatRec) === "2");
-  comprobarPar(documento, "iMotEmiNR", "motivo de remisión", tipo === "7");
-  comprobarPar(documento, "iRespEmiNR", "responsable de remisión", tipo === "7");
-  if (["1", "4"].includes(tipo) && String(documento.iCondOpe) === "1")
-    for (const [i, pago] of (documento.Pagos || []).entries()) {
-      comprobarPar(pago, "iTiPago", `Pagos.${i}`);
-      comprobarPar(pago, "iDenTarj", `Pagos.${i}`, ["3", "4"].includes(String(pago.iTiPago)));
-    }
+  errores.push(...relaciones.errores);
   // Aplica también a JSON pegados o importados, no solo al formulario.
   recorrerCampos(documento, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
-    if (["dDesIndPres","dDTipIDRec","dDesTiPag","dDesDenTarj","dDesMotEmiNR"].includes(codigo) && /^(?:otro|otros|otra|otras)$/i.test(String(valor).trim())) errores.push(`(${codigo}) Describí el valor concreto; no escribas solamente Otro u Otros.`);
     const error = errorFormato(codigo, valor);
     if (error) errores.push(`(${codigo}) ${info.nombre} [${ruta}]: ${error}`);
     if (

@@ -39,6 +39,8 @@ import {
 import {
   validarDocumento as validateDocument,
   camposFaltantes,
+  completarDescripciones,
+  revisarDescripciones,
   vaciarCamposOpcionales,
 } from "../../lib/documentos/campos-documentos";
 import { prepararJSONPegado } from "../../lib/integracion/ordenar-json";
@@ -383,9 +385,13 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
           setNotice("Completá los campos indicados antes de enviar.", "warning");
           return;
         }
+        const pendientes = revisarDescripciones(data, type).sugerencias.length;
+        const aviso = pendientes
+          ? "\n\nEl JSON omite descripciones deducibles. Confirmá solo si tu integración las genera."
+          : "";
         if (
           !window.confirm(
-            `Se enviará ${selected.name.toLowerCase()} a ${url}. ¿Confirmás el envío?`,
+            `Se enviará ${selected.name.toLowerCase()} a ${url}. ¿Confirmás el envío?${aviso}`,
           )
         )
           return;
@@ -528,6 +534,10 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   // La guía se actualiza con los datos del formulario, sin llamar a la IA por cada tecla.
   const faltantesActuales =
     parsed && mode === "emit" ? camposFaltantes(parsed, type) : [];
+  const tipoRevisionActual = mode === "emit" ? type : String(parsed?.iTiDE || "");
+  const descripcionesSugeridas = revisionRealizada && parsed && ["1","4","5","6","7"].includes(tipoRevisionActual)
+    ? revisarDescripciones(parsed, tipoRevisionActual).sugerencias
+    : [];
   // Solo el estado explícito del documento permite mostrar aprobación.
   const approved =
     response?.data?.Estado === "Aprobado" ||
@@ -902,8 +912,23 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     {ordenado.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{ordenado.registro}</pre></details>}
                   </details>}
                   {(revisionRealizada || errors.length > 0) && <details className={`validation ${errors.length ? "revision-warning" : "revision-success"}`} open role="status">
-                    <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin problemas detectados"}</summary>
+                    <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin errores detectados"}</summary>
                     <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
+                    {descripcionesSugeridas.length > 0 && (
+                      <div className="errores-desplegables">
+                        <p>Podés completar estas descripciones o dejar el JSON como está si tu integración las genera al emitir.</p>
+                        <ul>
+                          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor }) => {
+                            const ruta = grupo ? `${grupo}[${indice}].${campo}` : campo;
+                            return <li key={ruta}><code>{ruta}</code> · {valor} (según <code>{codigo}</code>)</li>;
+                          })}
+                        </ul>
+                        <button type="button" onClick={() => {
+                          setBody(pretty(completarDescripciones(parsed, tipoRevisionActual)));
+                          setNotice("Descripciones completadas en el JSON.", "success");
+                        }}>Autocompletar descripciones</button>
+                      </div>
+                    )}
                   </details>}
                 </section>
                 <aside className="right-column">

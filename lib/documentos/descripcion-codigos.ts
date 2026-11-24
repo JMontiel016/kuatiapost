@@ -3,6 +3,17 @@
  * El usuario nunca debe inventar una descripción para un código estándar.
  */
 export const parejasCodigoDescripcion = {
+  iTiDE: { campo: "dDesTiDE", otro: "", valores: {
+    "1":"Factura electrónica", "2":"Factura electrónica de exportación", "3":"Factura electrónica de importación",
+    "4":"Autofactura electrónica", "5":"Nota de crédito electrónica", "6":"Nota de débito electrónica",
+    "7":"Nota de remisión electrónica", "8":"Comprobante de retención electrónico",
+  } },
+  iTImp: { campo: "dDesTImp", otro: "", valores: {
+    "1":"IVA", "2":"ISC", "3":"Renta", "4":"Ninguno", "5":"IVA – Renta",
+  } },
+  iTipDocAso: { campo: "dDesTipDocAso", otro: "", valores: {
+    "1":"Electrónico", "2":"Impreso", "3":"Constancia Electrónica",
+  } },
   iMotEmi: { campo: "dDesMotEmi", otro: "", valores: {
     "1":"Devolución y Ajuste de precios", "2":"Devolución", "3":"Descuento", "4":"Bonificación",
     "5":"Crédito incobrable", "6":"Recupero de costo", "7":"Recupero de gasto", "8":"Ajuste de precio",
@@ -26,8 +37,8 @@ export const parejasCodigoDescripcion = {
     "5":"Transferencia", "6":"Giro", "7":"Billetera electrónica", "8":"Tarjeta empresarial",
     "9":"Vale", "10":"Retención", "11":"Pago por anticipo", "12":"Valor fiscal",
     "13":"Valor comercial", "14":"Compensación", "15":"Permuta", "16":"Pago bancario",
-    "17":"Pago móvil", "18":"Donación", "19":"Promoción", "20":"Consumo interno",
-    "21":"Pago electrónico",
+    "17":"Pago Móvil", "18":"Donación", "19":"Promoción", "20":"Consumo Interno",
+    "21":"Pago Electrónico",
   } },
   iDenTarj: { campo: "dDesDenTarj", otro: "99", valores: {
     "1":"Visa", "2":"Mastercard", "3":"American Express", "4":"Maestro",
