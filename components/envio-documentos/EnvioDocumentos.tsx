@@ -939,7 +939,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <div className="errores-desplegables">
                       <p>
                         {informeCompleto.aplicanReglas
-                          ? `Manual v150 · ${documentTypes.find(d => d.id === informeCompleto.tipo)?.name || "Documento electrónico"} (iTiDE=${informeCompleto.tipo})`
+                          ? `${documentTypes.find(d => d.id === informeCompleto.tipo)?.name || "Documento electrónico"} (iTiDE=${informeCompleto.tipo})`
                           : "Sintaxis y formatos conocidos"}
                         {" · "}{informeCompleto.resumen.campos} campos recorridos · {informeCompleto.resumen.filas} filas
                         {" · "}{informeCompleto.resumen.fueraDeCatalogo} campos fuera del catálogo

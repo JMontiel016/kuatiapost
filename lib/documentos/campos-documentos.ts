@@ -611,7 +611,7 @@ export function informacionCampo(
   // es opcional; únicamente un receptor contribuyente no debe informarla.
   if (["iTipIDRec", "dNumIDRec"].includes(codigo)) {
     if (String(documento.iNatRec) === "2" && String(documento.iTiOpe) === "4")
-      return opcional("Puede informarse para el receptor no contribuyente en B2F (NT 023, D208 y D210).");
+      return opcional("Puede informarse para el receptor no contribuyente en B2F.");
     return condicion(String(documento.iNatRec) === "2", !estaVacio(documento.iNatRec),
       "Obligatorio para un no contribuyente si la operación es distinta de B2F.", "NT 023, D208 y D210");
   }
@@ -1143,7 +1143,7 @@ function erroresTotalBruto(documento: any, tipo: string, numeros?: ReadonlyMap<s
     if (total !== esperado) {
       const decimal = (esperado % 100000000n).toString().padStart(8, "0").replace(/0+$/, "");
       const importe = (esperado / 100000000n).toString() + (decimal ? "." + decimal : "");
-      errores.push(`(dTotOpe) [Subtotales[${indice}].dTotOpe]: la suma de los cuatro subtotales da ${importe}. Referencia: Manual v150, F008.`);
+      errores.push(`(dTotOpe) [Subtotales[${indice}].dTotOpe]: la suma de los cuatro subtotales da ${importe}.`);
     }
   }
   return errores;
@@ -1175,12 +1175,12 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
   if (documento.iTiOpe && String(documento.iTiOpe) !== "4" && documento.cPaisRec !== "PRY") errores.push("(cPaisRec) Para esta operación seleccioná Paraguay (PRY).");
   if (tipo === "4" && (String(documento.iNatRec) !== "1" || String(documento.iTiOpe) !== "2")) errores.push("Autofactura: el receptor debe ser contribuyente y la operación B2C (2).");
   if (tipo === "4" && !estaVacio(documento.iCondOpe) && String(documento.iCondOpe) !== "1")
-    errores.push("(iCondOpe) En una autofactura informá Contado (1), según E601.");
+    errores.push("(iCondOpe) En una autofactura informá Contado (1).");
   // NT 023: identificación innominada únicamente para B2C, nunca en NC/ND/NR.
   if (String(documento.iTipIDRec) === "5") {
-    if (["5", "6", "7"].includes(tipo)) errores.push("(iTipIDRec) Innominado no está permitido en nota de crédito, nota de débito o nota de remisión (NT 023, D208e).");
-    if (String(documento.iTiOpe) !== "2") errores.push("(iTipIDRec) Innominado únicamente corresponde a B2C (NT 023, D208f).");
-    if (String(documento.dNumIDRec) !== "0") errores.push("(dNumIDRec) Para Innominado informá 0, como indica la NT 023, D210.");
+    if (["5", "6", "7"].includes(tipo)) errores.push("(iTipIDRec) Innominado no está permitido en nota de crédito, nota de débito o nota de remisión.");
+    if (String(documento.iTiOpe) !== "2") errores.push("(iTipIDRec) Innominado únicamente corresponde a B2C.");
+    if (String(documento.dNumIDRec) !== "0") errores.push("(dNumIDRec) Para Innominado informá 0.");
   }
   if (String(documento.iNatRec) === "2") for (const k of ["iTiContRec","dRucRec","dDVRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a un receptor no contribuyente. Retirá este dato.`);
   if (String(documento.iNatRec) === "1") for (const k of ["iTipIDRec","dDTipIDRec","dNumIDRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a esta selección del receptor. Retirá este dato.`);
@@ -1228,7 +1228,7 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
     const dato = original && !/[eE]/.test(original) ? original : valor;
     const error = errorFormato(codigo, dato);
     const rutaVisible = grupo ? `${grupoOriginal}[${indice}].${codigo}` : ruta;
-    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error} Referencia: ${formatoCampo(codigo)?.referencia || info.referencia}.`);
+    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error}`);
     if (
       !estaVacio(valor) &&
       info.opciones &&

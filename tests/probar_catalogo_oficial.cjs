@@ -91,10 +91,11 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    assert.ok(informe.errores.some(e => /Detalles\[0\].*objeto/.test(e)));
    assert.ok(informe.errores.some(e => /Detalles\[1\].*mayor que cero/.test(e)));
    assert.ok(informe.errores.some(e => /dEst.*3 caracteres/.test(e)));
-   assert.ok(informe.errores.some(e => /dIVAComi.*F026/.test(e)));
-   assert.ok(informe.errores.some(e => /dTotOpe.*0\.3.*F008/.test(e)));
+   assert.ok(informe.errores.some(e => /dIVAComi.*Recibido: 1 dígitos enteros y 9 decimales/.test(e)));
+   assert.ok(informe.errores.some(e => /dTotOpe.*la suma de los cuatro subtotales da 0\.3/.test(e)));
    assert.ok(informe.errores.some(e => /anidado\.segunda\.dNumDoc.*7 caracteres/.test(e)));
    assert.ok(!informe.avisos.some(e => e.includes('dIVAComi')));
+   assert.ok(!informe.mensajes.some(e => /manual|sifen|marangatu|referencia:|\bNT \d/i.test(e)));
  });
  await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
    const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };

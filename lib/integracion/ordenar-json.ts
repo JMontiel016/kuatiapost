@@ -85,7 +85,7 @@ export function prepararJSONPegado(texto: string, tipoSeleccionado?: string) {
       if (formato && (!aplicanReglas || !rutaDePlantilla)) {
         const literal = typeof dato === "number" && revisionTexto.numeros.get(JSON.stringify(pasos));
         const error = errorFormato(clave, literal && !/[eE]/.test(literal) ? literal : dato);
-        if (error) errores.push(`(${clave}) [${ubicacion}]: ${error} Referencia: ${formato.referencia}.`);
+        if (error) errores.push(`(${clave}) [${ubicacion}]: ${error}`);
       }
       revisar(dato, pasos, ubicacion);
     }
