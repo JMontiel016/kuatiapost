@@ -10,6 +10,10 @@ export type FormatoCampo = {
   referencia: string;
 };
 const formatos: Record<string, FormatoCampo> = {
+  dComi: { tipo: "numero", minimo: 1, maximo: 15, decimales: 8, referencia: "Manual v150, F025" },
+  dIVAComi: { tipo: "numero", minimo: 1, maximo: 15, decimales: 8, referencia: "Manual v150, F026" },
+  dLiqTotIVA5: { tipo: "numero", minimo: 1, maximo: 15, decimales: 8, referencia: "Manual v150, F036" },
+  dLiqTotIVA10: { tipo: "numero", minimo: 1, maximo: 15, decimales: 8, referencia: "Manual v150, F037" },
   dDesPaisRe: { tipo: "texto", minimo: 4, maximo: 30, decimales: 0, referencia: "SIFEN D204" },
   dTiVehTras: { tipo: "texto", minimo: 4, maximo: 10, decimales: 0, referencia: "SIFEN E961" },
   dMarVeh: { tipo: "texto", minimo: 1, maximo: 10, decimales: 0, referencia: "SIFEN E962" },

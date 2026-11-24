@@ -126,6 +126,10 @@ const nombres: Record<string, [string, string]> = {
   dDescTotal: ["Total Descuentos de la operación", "0.00000000"],
   dAnticipo: ["Total Anticipos de la operación", "0.00000000"],
   dRedon: ["Redondeo de la operación", "0.0000"],
+  dComi: ["Comisión de la operación", "0.00000000"],
+  dIVAComi: ["Liquidación total del IVA de la comisión", "0.00000000"],
+  dLiqTotIVA5: ["Liquidación del IVA por redondeo a la tasa del 5%", "0.00000000"],
+  dLiqTotIVA10: ["Liquidación del IVA por redondeo a la tasa del 10%", "0.00000000"],
   dTotGralOpe: ["Total Neto de la operación", "Importe final del registro"],
   dIVA5: ["Liquidación del IVA a la tasa del 5%", "0.00000000 si no corresponde"],
   dIVA10: ["Liquidación del IVA a la tasa del 10%", "0.00000000 si no corresponde"],
@@ -706,7 +710,7 @@ export function informacionCampo(
         "Se requiere al expresar en guaraníes un registro en moneda extranjera.",
         "Manual v150, F023",
       );
-    const items = Array.isArray(documento.Detalles) ? documento.Detalles : [];
+    const items = Array.isArray(documento.Detalles) ? documento.Detalles.filter(esFilaDocumento) : [];
     // Los subtotales 0-1 solo se activan cuando hay ítems de esa categoría.
     const categoria: Record<string, boolean> = {
       dSubExe: items.some((i: any) => ["3", "4"].includes(String(i.iAfecIVA))),
@@ -951,10 +955,10 @@ export function camposFaltantes(documento: any, tipo: string) {
   const revision = { ...estructura, ...documento };
   for (const [grupo, filas] of Object.entries(documento))
     if (Array.isArray(filas))
-      revision[grupo] = filas.map((fila: any) => ({
+      revision[grupo] = filas.map((fila: any) => esFilaDocumento(fila) ? ({
         ...((estructura[grupo] || [])[0] || {}),
         ...fila,
-      }));
+      }) : undefined);
   const { deducibles } = revisarDescripciones(documento, tipo);
   recorrerCampos(revision, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
@@ -1104,30 +1108,69 @@ export function completarDescripciones(documento: any, tipo: string) {
   return resultado;
 }
 
+const gruposDocumento = ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega", "Cuotas"];
+
+function esFilaDocumento(fila: unknown): fila is Record<string, unknown> {
+  return !!fila && typeof fila === "object" && !Array.isArray(fila);
+}
+
 export function validarEstructuraDocumento(documento: Record<string, unknown>) {
-  return ["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Transporte", "Salida", "Entrega"].flatMap(grupo => {
+  return gruposDocumento.flatMap(grupo => {
     if (!(grupo in documento)) return [];
     const filas = documento[grupo];
     if (!Array.isArray(filas)) return [`(${grupo}) Debe ser una lista entre corchetes [ ].`];
-    if (filas.some(fila => !fila || typeof fila !== "object" || Array.isArray(fila)))
-      return [`(${grupo}) Cada ítem debe ser un objeto entre llaves { }.`];
-    return [];
+    return filas.flatMap((fila, indice) => esFilaDocumento(fila)
+      ? [] : [`(${grupo}[${indice}]) El ítem debe ser un objeto entre llaves { }.`]);
   });
+}
+
+/** Comprueba F008 cuando el JSON informa los cuatro subtotales de la fórmula. */
+function erroresTotalBruto(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
+  if (["4", "7"].includes(tipo) || !["1", "3", "4", "5"].includes(String(documento.iTImp))) return [];
+  const errores: string[] = [];
+  const campos = ["dSubExe", "dSubExo", "dSub5", "dSub10", "dTotOpe"];
+  for (const [indice, fila] of (documento.Subtotales || []).entries()) {
+    if (!fila) continue;
+    const importes = campos.map(campo => {
+      const dato = numeros?.get(JSON.stringify(["Subtotales", indice, campo])) ?? String(fila[campo] ?? "");
+      if (!/^\d{1,15}(?:\.\d{1,8})?$/.test(dato)) return null;
+      const [entero, decimal = ""] = dato.split(".");
+      return BigInt(entero + decimal.padEnd(8, "0"));
+    });
+    if (importes.some(importe => importe === null)) continue;
+    const [exento, exonerado, iva5, iva10, total] = importes as bigint[];
+    const esperado = exento + exonerado + iva5 + iva10;
+    if (total !== esperado) {
+      const decimal = (esperado % 100000000n).toString().padStart(8, "0").replace(/0+$/, "");
+      const importe = (esperado / 100000000n).toString() + (decimal ? "." + decimal : "");
+      errores.push(`(dTotOpe) [Subtotales[${indice}].dTotOpe]: la suma de los cuatro subtotales da ${importe}. Referencia: Manual v150, F008.`);
+    }
+  }
+  return errores;
 }
 
 /** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
 export function validarDocumento(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
   const estructura = validarEstructuraDocumento(documento);
-  if (estructura.length) return estructura;
+  if (estructura.length) {
+    documento = { ...documento };
+    for (const grupo of gruposDocumento) {
+      if (!(grupo in documento)) continue;
+      const filas = documento[grupo];
+      documento[grupo] = Array.isArray(filas)
+        ? filas.map(fila => esFilaDocumento(fila) ? fila : undefined)
+        : [];
+    }
+  }
   const relaciones = revisarDescripciones(documento, tipo);
   const usaFormaPago = ["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago);
   if (usaFormaPago) {
     const { FormaPago, ...resto } = documento;
     documento = { ...resto, Pagos: FormaPago };
   }
-  const errores = camposFaltantes(documento, tipo).map(
+  const errores = [...estructura, ...camposFaltantes(documento, tipo).map(
     (f) => `(${f.codigo}) ${f.nombre} [${usaFormaPago ? f.ruta.replace(/^Pagos\./, "FormaPago.") : f.ruta}]: falta completar. ${f.motivo}`,
-  );
+  )];
   if (String(documento.iTiOpe) === "4" && (String(documento.iNatRec) !== "2" || documento.cPaisRec === "PRY")) errores.push("Servicios al exterior: elegí No contribuyente y un país diferente de PRY.");
   if (documento.iTiOpe && String(documento.iTiOpe) !== "4" && documento.cPaisRec !== "PRY") errores.push("(cPaisRec) Para esta operación seleccioná Paraguay (PRY).");
   if (tipo === "4" && (String(documento.iNatRec) !== "1" || String(documento.iTiOpe) !== "2")) errores.push("Autofactura: el receptor debe ser contribuyente y la operación B2C (2).");
@@ -1148,6 +1191,7 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
       errores.push("(Pagos) Informá la forma de pago de la entrega inicial.");
   }
   for (const pago of documento.Pagos || []) {
+    if (!pago) continue;
     if (String(pago.iTiPago) !== "2" && (pago.dNumCheq || pago.dBcoEmi)) errores.push("Datos de cheque: solo corresponden cuando la forma de pago es Cheque (2).");
     if (!["3","4"].includes(String(pago.iTiPago)) && (pago.iDenTarj || pago.iForProPa || pago.dNumTarj)) errores.push("Datos de tarjeta: solo corresponden a crédito (3) o débito (4).");
   }
@@ -1184,7 +1228,7 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
     const dato = original && !/[eE]/.test(original) ? original : valor;
     const error = errorFormato(codigo, dato);
     const rutaVisible = grupo ? `${grupoOriginal}[${indice}].${codigo}` : ruta;
-    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error}`);
+    if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error} Referencia: ${formatoCampo(codigo)?.referencia || info.referencia}.`);
     if (
       !estaVacio(valor) &&
       info.opciones &&
@@ -1217,5 +1261,6 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
     errores.push("(tipOpe) Operación: el envío de datos utiliza 1.");
   if (Array.isArray(documento.Detalles) && documento.Detalles.length > 999)
     errores.push("Productos: el registro admite hasta 999 ítems.");
+  errores.push(...erroresTotalBruto(documento, tipo, numeros));
   return [...new Set(errores)];
 }

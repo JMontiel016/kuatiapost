@@ -1,5 +1,6 @@
 import { applyEdits, format } from "jsonc-parser";
 import { quitarComentariosJSON, revisarTextoJSON } from "./solicitudes-integracion";
+import { errorFormato, formatoCampo } from "../documentos/formatos-campos";
 import catalogo from "../../documentacion/CATALOGO_NOMBRES_MANUAL.json";
 import { informacionCampo, validarDocumento, validarEstructuraDocumento } from "../documentos/campos-documentos";
 
@@ -39,7 +40,7 @@ function finBloque(texto: string, inicio: number): number {
 
 /** Conserva el bloque original para que formatear no redondee importes.
  * Los registros adjuntos solo se separan si comienzan con una fecha de log. */
-export function prepararJSONPegado(texto: string, tipoSeleccionado?: string): { json: string; mensajes: string[]; registro: string } {
+export function prepararJSONPegado(texto: string, tipoSeleccionado?: string) {
   const limpio = texto.trim();
   let principal = limpio, registro = "";
   try { JSON.parse(quitarComentariosJSON(limpio)); }
@@ -53,46 +54,79 @@ export function prepararJSONPegado(texto: string, tipoSeleccionado?: string): { 
       throw new Error("Hay texto adicional que no se reconoce como registro. Separalo antes de ordenar.");
   }
   const valor = JSON.parse(quitarComentariosJSON(principal));
-  const revisionTexto = revisarTextoJSON(principal);
-  const mensajes = [...revisionTexto.errores];
-  const tipo = tipoSeleccionado || String(valor?.iTiDE || "");
-  // Los campos personalizados se conservan: no reconocido no significa inválido.
-  const grupos = new Set(["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Cuotas", "tipOpe", "tipoDoc", "ruc", "password"]);
-  function revisar(v: any, ruta = "") {
-    if (Array.isArray(v)) return v.forEach((fila, i) => revisar(fila, `${ruta}[${i + 1}]`));
+  const revisionTexto = revisarTextoJSON(registro ? principal : texto);
+  const errores = [...revisionTexto.errores];
+  const avisos: string[] = [];
+  const tipoDeclarado = String(valor?.iTiDE ?? "").trim();
+  const tipo = tipoDeclarado || tipoSeleccionado || "";
+  const aplicanReglas = ["1", "4", "5", "6", "7"].includes(tipo);
+  const camposDeIntegracion = new Set(["Detalles", "Pagos", "FormaPago", "Subtotales", "DocumentosAsociados", "Cuotas", "Transporte", "Salida", "Entrega", "tipOpe", "tipoDoc", "ruc", "password"]);
+  const resumen = { campos: 0, filas: 0, fueraDeCatalogo: 0 };
+  function revisar(v: unknown, camino: (string | number)[] = [], ruta = "") {
+    if (Array.isArray(v)) {
+      resumen.filas += v.length;
+      v.forEach((fila, i) => revisar(fila, [...camino, i], `${ruta}[${i}]`));
+      return;
+    }
     if (!v || typeof v !== "object") return;
-    Object.entries(v).forEach(([clave, dato]) => {
+    for (const [clave, dato] of Object.entries(v)) {
       const ubicacion = ruta ? `${ruta}.${clave}` : clave;
-      if (!Object.hasOwn(catalogo, clave) && !grupos.has(clave) && informacionCampo(clave, valor, tipo).estado === "integracion")
-        mensajes.push(`${ubicacion}: campo no reconocido en el catálogo disponible; confirmá si tu API lo admite. Se conserva.`);
-      if (clave === "FormaPago") mensajes.push(`${ubicacion}: tu integración puede esperar Pagos. Confirmá su contrato antes de renombrar.`);
-      revisar(dato, ubicacion);
-    });
+      const pasos = [...camino, clave];
+      const formato = formatoCampo(clave);
+      resumen.campos++;
+      if (!formato && !Object.hasOwn(catalogo, clave) && !camposDeIntegracion.has(clave) &&
+        informacionCampo(clave, valor, tipo).estado === "integracion") {
+        resumen.fueraDeCatalogo++;
+        avisos.push(`${ubicacion}: campo no reconocido en el catálogo disponible; confirmá si tu API lo admite. Se conserva.`);
+      }
+      if (clave === "FormaPago") avisos.push(`${ubicacion}: alias reconocido durante la revisión. Se conserva el nombre que usa tu integración.`);
+      // Las rutas de la plantilla se verifican en validarDocumento.
+      const rutaDePlantilla = pasos.length === 1 || (pasos.length === 3 && typeof pasos[1] === "number");
+      if (formato && (!aplicanReglas || !rutaDePlantilla)) {
+        const literal = typeof dato === "number" && revisionTexto.numeros.get(JSON.stringify(pasos));
+        const error = errorFormato(clave, literal && !/[eE]/.test(literal) ? literal : dato);
+        if (error) errores.push(`(${clave}) [${ubicacion}]: ${error} Referencia: ${formato.referencia}.`);
+      }
+      revisar(dato, pasos, ubicacion);
+    }
   }
   revisar(valor);
   if (valor && typeof valor === "object" && !Array.isArray(valor)) {
-    if (["1", "4", "5", "6", "7"].includes(tipo))
-      mensajes.push(...validarDocumento(valor, tipo, revisionTexto.numeros));
+    if (aplicanReglas)
+      errores.push(...validarDocumento(valor, tipo, revisionTexto.numeros));
     else {
-      mensajes.push(...validarEstructuraDocumento(valor));
-      mensajes.push("Para aplicar las reglas de un documento de emisión, indicá iTiDE: 1, 4, 5, 6 o 7.");
+      errores.push(...validarEstructuraDocumento(valor));
+      const mensaje = "Para aplicar las reglas de un documento de emisión, indicá iTiDE: 1, 4, 5, 6 o 7.";
+      if (String(valor.tipOpe) === "1") errores.push(mensaje);
+      else avisos.push(mensaje);
     }
+    if (tipoDeclarado && tipoSeleccionado && tipoDeclarado !== tipoSeleccionado)
+      avisos.push(`El JSON declara iTiDE=${tipoDeclarado}. El editor está configurado para iTiDE=${tipoSeleccionado}.`);
     if (valor.gCamItem && !valor.Detalles)
-      mensajes.push("(gCamItem) La plantilla de envío usa Detalles para los productos. Confirmá la clave que espera tu integración.");
+      avisos.push("(gCamItem) La plantilla de envío usa Detalles para los productos. Confirmá la clave que espera tu integración.");
   } else {
-    mensajes.push("La solicitud debe ser un objeto JSON.");
+    errores.push("La solicitud debe ser un objeto JSON.");
   }
   if (registro) {
-    mensajes.unshift("Se detectó un registro adjunto y se analizó por separado.");
+    avisos.unshift("Se detectó un registro adjunto y se analizó por separado.");
     const inicio = registro.indexOf("{");
     if (inicio >= 0) {
       try {
         const respuesta = JSON.parse(registro.slice(inicio, finBloque(registro, inicio)));
         const error = respuesta.original?.message ?? respuesta.message;
-        if (typeof error === "string") mensajes.push(`Respuesta de la API: ${error}`);
-        else if (error && typeof error === "object") Object.entries(error).forEach(([campo, detalle]) => mensajes.push(`Respuesta de la API · ${campo}: ${typeof detalle === "string" ? detalle : JSON.stringify(detalle)}`));
-      } catch { mensajes.push("El registro adjunto contiene una respuesta que no se pudo interpretar. Podés verla debajo."); }
+        if (typeof error === "string") avisos.push(`Respuesta de la API: ${error}`);
+        else if (error && typeof error === "object") Object.entries(error).forEach(([campo, detalle]) => avisos.push(`Respuesta de la API · ${campo}: ${typeof detalle === "string" ? detalle : JSON.stringify(detalle)}`));
+      } catch { avisos.push("El registro adjunto contiene una respuesta que no se pudo interpretar. Podés verla debajo."); }
     }
   }
-  return { json: ordenarJSON(principal), mensajes: [...new Set(mensajes)], registro };
+  return {
+    json: ordenarJSON(principal),
+    tipo,
+    aplicanReglas,
+    errores: [...new Set(errores)],
+    avisos: [...new Set(avisos)],
+    mensajes: [...new Set([...errores, ...avisos])],
+    resumen,
+    registro,
+  };
 }

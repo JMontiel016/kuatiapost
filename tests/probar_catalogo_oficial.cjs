@@ -78,6 +78,24 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    assert.ok(informe.mensajes.some(e => /dCantProSer.*9 decimales/.test(e)));
    assert.ok(informe.mensajes.some(e => /dCodInt.*Clave repetida/.test(e)));
  });
+ await ok('revisa todas las filas aunque otra sea inválida y usa el tipo declarado', () => {
+   const doc = { iTiDE: 1, tipOpe: 1, iTImp: 1, dEst: '01',
+     Detalles: [null, { dCantProSer: 0 }],
+     Subtotales: [{ dSubExe: '0.1', dSubExo: '0.2', dSub5: '0', dSub10: '0', dTotOpe: '0.31', dIVAComi: '0.000000001' }],
+     anidado: { segunda: { dNumDoc: '01' } },
+   };
+   const informe = prepararJSONPegado(JSON.stringify(doc), '7');
+   assert.equal(informe.tipo, '1');
+   assert.equal(informe.resumen.filas, 3);
+   assert.ok(informe.avisos.some(e => /declara iTiDE=1/.test(e)));
+   assert.ok(informe.errores.some(e => /Detalles\[0\].*objeto/.test(e)));
+   assert.ok(informe.errores.some(e => /Detalles\[1\].*mayor que cero/.test(e)));
+   assert.ok(informe.errores.some(e => /dEst.*3 caracteres/.test(e)));
+   assert.ok(informe.errores.some(e => /dIVAComi.*F026/.test(e)));
+   assert.ok(informe.errores.some(e => /dTotOpe.*0\.3.*F008/.test(e)));
+   assert.ok(informe.errores.some(e => /anidado\.segunda\.dNumDoc.*7 caracteres/.test(e)));
+   assert.ok(!informe.avisos.some(e => e.includes('dIVAComi')));
+ });
  await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
    const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };
    const revision = revisarDescripciones(doc, '1');
@@ -104,7 +122,7 @@ const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:
    assert.ok(errores.some(e => e.includes('Pagos[1].iTiPago')));
    assert.ok(sugerencias.some(s => s.campo === 'dDCondOpe' && s.valor === 'Crédito' && s.reemplaza));
    assert.ok(validarDocumento({ iCondOpe: 2, dMonEnt: 10 }, '1').some(e => e.includes('forma de pago de la entrega inicial')));
-   assert.deepEqual(validarDocumento({ Pagos: [null] }, '1'), ['(Pagos) Cada ítem debe ser un objeto entre llaves { }.']);
+   assert.ok(validarDocumento({ Pagos: [null] }, '1').some(e => /Pagos\[0\].*objeto/.test(e)));
  });
  await ok('presencia, país y descripción de identidad deducibles, sin cambiar tipOpe', () => {
    const doc = { iTiDE: 1, iIndPres: 2, iNatRec: 2, iTiOpe: 4, cPaisRec: 'BRA', iTipIDRec: 1, dDTipIDRec: 'RUC' };

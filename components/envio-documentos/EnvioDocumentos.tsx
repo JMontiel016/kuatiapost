@@ -150,7 +150,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     [replace, setReplace] = useState(texto("replace"));
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
-  const [informeJSON, cambiarInformeJSON] = useState<{ mensajes: string[]; registro: string; sobre: string } | null>(null);
+  const [informeJSON, cambiarInformeJSON] = useState<(ReturnType<typeof prepararJSONPegado> & { sobre: string }) | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
   const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
@@ -572,8 +572,8 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   // La guía se actualiza con los datos del formulario, sin llamar a la IA por cada tecla.
   const faltantesActuales =
     parsed && mode === "emit" ? camposFaltantes(parsed, type) : [];
-  const tipoRevisionActual = mode === "emit" ? type : String(parsed?.iTiDE || "");
   const informeCompleto = informeJSON?.sobre === body ? informeJSON : null;
+  const tipoRevisionActual = informeCompleto?.tipo || (mode === "emit" ? type : String(parsed?.iTiDE || ""));
   const descripcionesSugeridas = (revisionRealizada || informeCompleto) && parsed && ["1","4","5","6","7"].includes(tipoRevisionActual)
     ? revisarDescripciones(parsed, tipoRevisionActual).sugerencias
     : [];
@@ -936,7 +936,20 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                   {informeCompleto && <details className={`validation ${informeCompleto.mensajes.length || descripcionesSugeridas.length ? "revision-warning" : "revision-success"}`} open role="status">
                     <summary>Verificación completa del JSON</summary>
                     <button onClick={() => cambiarInformeJSON(null)}>Cerrar revisión</button>
-                    <div className="errores-desplegables">{informeCompleto.mensajes.length ? informeCompleto.mensajes.map((mensaje, i) => <p key={i}>{mensaje}</p>) : <p>No se detectaron avisos con el catálogo y las reglas disponibles.</p>}</div>
+                    <div className="errores-desplegables">
+                      <p>
+                        {informeCompleto.aplicanReglas
+                          ? `Manual v150 · ${documentTypes.find(d => d.id === informeCompleto.tipo)?.name || "Documento electrónico"} (iTiDE=${informeCompleto.tipo})`
+                          : "Sintaxis y formatos conocidos"}
+                        {" · "}{informeCompleto.resumen.campos} campos recorridos · {informeCompleto.resumen.filas} filas
+                        {" · "}{informeCompleto.resumen.fueraDeCatalogo} campos fuera del catálogo
+                      </p>
+                      <p>{informeCompleto.errores.length} errores · {informeCompleto.avisos.length} avisos · {descripcionesSugeridas.length} descripciones sugeridas</p>
+                      {informeCompleto.errores.length > 0 && <><strong>Errores para corregir</strong>
+                        {informeCompleto.errores.map(mensaje => <p key={mensaje}>{mensaje}</p>)}</>}
+                      {informeCompleto.avisos.length > 0 && <><strong>Avisos de la integración</strong>
+                        {informeCompleto.avisos.map(mensaje => <p key={mensaje}>{mensaje}</p>)}</>}
+                    </div>
                     {informeCompleto.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{informeCompleto.registro}</pre></details>}
                     {accionesDescripciones}
                   </details>}
