@@ -8,6 +8,8 @@ require.extensions['.ts']=(m,file)=>{const src=TS.transpileModule(fs.readFileSyn
 const geo=require(path.join(raiz,'lib/documentos/validar-geografia.ts'));
 const {crearPlantilla}=require(path.join(raiz,'lib/documentos/plantillas-documentos.ts'));
 const { revisarDescripciones, completarDescripciones, validarDocumento } = require(path.join(raiz, 'lib/documentos/campos-documentos.ts'));
+const { ordenarJSON, prepararJSONPegado } = require(path.join(raiz, 'lib/integracion/ordenar-json.ts'));
+const { parseObject, quitarComentariosJSON, request } = require(path.join(raiz, 'lib/integracion/solicitudes-integracion.ts'));
 let total=0;
 async function ok(nombre,f){await f();console.log('OK',nombre);total++;}
 async function falla(nombre,f,contiene){await assert.rejects(f,error=>error.message.includes(contiene));console.log('OK',nombre);total++;}
@@ -15,6 +17,31 @@ const dis=new Map(data.distritos.map(([c,d,n])=>[c,{d,n}]));
 const ciudad=new Map(data.ciudades.map(([c,d,n])=>[c,{d,n}]));
 const lugar=(dep,dis,c)=>({departamento:String(dep),distrito:String(dis),ciudad:String(c)});
 (async()=>{
+ await ok('Ordenar JSON conserva comentarios, decimales, claves y orden', async () => {
+   const texto = '{"z":6425.0900, // tasa del día\n"a":"https://ejemplo.test/a//b","lista":[9007199254740999,1e-03]}';
+   const ordenado = ordenarJSON(texto);
+   assert.match(ordenado, /^\{\n    "z": 6425\.0900, \/\/ tasa del día\n    "a":/);
+   assert.match(ordenado, /9007199254740999/);
+   assert.match(ordenado, /1e-03/);
+   assert.equal(ordenarJSON(ordenado), ordenado);
+   assert.equal(parseObject(ordenado).a, 'https://ejemplo.test/a//b');
+   assert.deepEqual(parseObject('// nota\n{"a":1} // fin'), { a: 1 });
+   assert.throws(() => ordenarJSON('{"a":1, // comentario\n}'));
+   assert.match(prepararJSONPegado(texto + '\n[2026-11-24] app.ERROR: falla').registro, /app.ERROR/);
+   const fetchOriginal = global.fetch;
+   try {
+     global.fetch = async (_url, opciones) => {
+       assert.equal(opciones.body, quitarComentariosJSON(ordenado));
+       assert.match(opciones.body, /6425\.0900/);
+       assert.doesNotMatch(opciones.body, /tasa del día/);
+       assert.deepEqual(JSON.parse(opciones.body), parseObject(ordenado));
+       return new Response('{}');
+     };
+     await request('https://ejemplo.test', 'POST', parseObject(ordenado), '', ordenado);
+   } finally {
+     global.fetch = fetchOriginal;
+   }
+ });
  await ok('descripción deducible no bloquea y se puede aplicar por fila', () => {
    const doc = { iTiDE: 1, iCondOpe: 1, Pagos: [{ iTiPago: 1 }, { iTiPago: '5', dDesTiPag: 'Transferencia' }] };
    const revision = revisarDescripciones(doc, '1');

@@ -1,12 +1,29 @@
 /** Utilidades JSON y solicitudes GET/POST a la URL de integración elegida por la persona. */
+import { createScanner } from "jsonc-parser";
 
 /** Formatea el JSON para que sea fácil de leer y editar. */
 export const pretty = (v: any) => JSON.stringify(v, null, 2);
 
+/** Quita comentarios de línea conservando posiciones y literales del JSON. */
+export function quitarComentariosJSON(text: string) {
+  const scanner = createScanner(text);
+  const partes: string[] = [];
+  let inicio = 0;
+  while (scanner.getPosition() < text.length) {
+    scanner.scan();
+    const offset = scanner.getTokenOffset();
+    if (!text.startsWith("//", offset)) continue;
+    const largo = scanner.getTokenLength();
+    partes.push(text.slice(inicio, offset), " ".repeat(largo));
+    inicio = offset + largo;
+  }
+  return inicio ? partes.join("") + text.slice(inicio) : text;
+}
+
 /** Valida la sintaxis y exige un objeto como raíz de la solicitud. */
 export function parseObject(text: string) {
   let v: any;
-  try { v = JSON.parse(text); }
+  try { v = JSON.parse(quitarComentariosJSON(text)); }
   catch { throw Error("JSON inválido: revisá comillas dobles, comas y el cierre de llaves o corchetes. Conservamos el texto para que puedas corregirlo."); }
   // Evita claves especiales que podrían modificar prototipos al importar datos.
   const revisar = (objeto: any) => {
@@ -43,6 +60,7 @@ export async function request(
   method: string,
   body: any,
   token: string,
+  jsonOriginal?: string,
 ) {
   if (!["GET", "POST"].includes(method))
     throw Error("Solo se admiten GET y POST.");
@@ -56,7 +74,9 @@ export async function request(
         ...(method === "GET" ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(method === "GET" ? {} : { body: JSON.stringify(body) }),
+      ...(method === "GET" ? {} : {
+        body: jsonOriginal === undefined ? JSON.stringify(body) : quitarComentariosJSON(jsonOriginal),
+      }),
       credentials: "omit",
       redirect: "error",
       signal: AbortSignal.timeout(45000),

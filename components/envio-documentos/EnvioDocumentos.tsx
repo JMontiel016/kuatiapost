@@ -43,7 +43,7 @@ import {
   revisarDescripciones,
   vaciarCamposOpcionales,
 } from "../../lib/documentos/campos-documentos";
-import { prepararJSONPegado } from "../../lib/integracion/ordenar-json";
+import { ordenarJSON, prepararJSONPegado } from "../../lib/integracion/ordenar-json";
 import CamposSolicitud from "../documentos/CamposSolicitud";
 import CamposDocumento, {
   type CampoEnfocado,
@@ -375,7 +375,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   /** Revisa campos aplicables antes de confirmar y enviar el documento. */
   async function sendRequest() {
     await attempt(async () => {
-      let data = parseObject(body);
+      const data = parseObject(body);
       if (!token.trim())
         throw Error("Generá o ingresá el token en Configuración.");
       if (mode === "emit") {
@@ -398,7 +398,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
       }
       setBusy(true);
       try {
-        const result = await request(url, method, data, token);
+        const result = await request(url, method, data, token, body);
         setResponse(result);
         setRecords((old) => [
           {
@@ -530,6 +530,23 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
         setAiBusy(false);
       }
     });
+  }
+  function formatearJSON() {
+    cambiarOrdenado(null);
+    try {
+      setBody(ordenarJSON(body));
+      setErrors([]);
+      cambiarRevisionRealizada(false);
+    } catch {
+      try {
+        const resultado = prepararJSONPegado(body);
+        setBody(resultado.json);
+        cambiarOrdenado(resultado);
+      } catch (error) {
+        cambiarRevisionRealizada(true);
+        setErrors([`No se pudo ordenar: ${error instanceof Error ? error.message : "revisá la sintaxis del JSON"}`]);
+      }
+    }
   }
   // La guía se actualiza con los datos del formulario, sin llamar a la IA por cada tecla.
   const faltantesActuales =
@@ -729,9 +746,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <button
                       title="Formatear JSON"
                       aria-label="Formatear JSON"
-                      onClick={() =>
-                        attempt(() => setBody(pretty(parseObject(body))))
-                      }
+                      onClick={formatearJSON}
                     >
                       <Braces size={17} />
                     </button>
@@ -834,11 +849,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     </span>
                   </div>
                   <div className="bottom-tools">
-                    {/* Formatea cualquier JSON válido sin convertir ni ordenar sus datos. */}
-                    <button onClick={() => {
-                      try { const resultado = prepararJSONPegado(body); setBody(resultado.json); cambiarOrdenado(resultado); }
-                      catch (error) { cambiarOrdenado(null); cambiarRevisionRealizada(true); setErrors([`No se pudo ordenar: ${error instanceof Error ? error.message : "revisá la sintaxis del JSON"}`]); }
-                    }}><Braces size={16}/>Ordenar JSON</button>
+                    <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
                     <button
                       onClick={() => {
                         cambiarRevisionRealizada(true);

@@ -1,27 +1,17 @@
+import { applyEdits, format } from "jsonc-parser";
+import { quitarComentariosJSON } from "./solicitudes-integracion";
 import catalogo from "../../documentacion/CATALOGO_NOMBRES_MANUAL.json";
 import { informacionCampo, validarDocumento } from "../documentos/campos-documentos";
 
 /** Solo modifica espacios fuera de las cadenas. Conserva literalmente números,
  * textos, claves e ítems, incluso enteros mayores que la precisión de JavaScript. */
 export function ordenarJSON(texto: string): string {
-  JSON.parse(texto); // Comprobar sintaxis sin usar sus valores para reconstruirla.
-  const tokens = texto.match(/"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}\[\],:]/g) || [];
-  let nivel = 0, salida = "";
-  const salto = () => "\n" + "  ".repeat(nivel);
-  tokens.forEach((token,i) => {
-    if (token === "{" || token === "[") {
-      salida += token;
-      nivel++;
-      if (tokens[i+1] !== "}" && tokens[i+1] !== "]") salida += salto();
-    } else if (token === "}" || token === "]") {
-      nivel--;
-      if (tokens[i-1] !== "{" && tokens[i-1] !== "[") salida += salto();
-      salida += token;
-    } else if (token === ",") salida += "," + salto();
-    else if (token === ":") salida += ": ";
-    else salida += token;
-  });
-  return salida;
+  JSON.parse(quitarComentariosJSON(texto));
+  return applyEdits(texto, format(texto, undefined, {
+    tabSize: 4,
+    insertSpaces: true,
+    eol: texto.includes("\r\n") ? "\r\n" : "\n",
+  })).trim();
 }
 
 /** Lee bloques completos respetando comillas y escapes. Nunca busca un objeto
@@ -52,17 +42,17 @@ function finBloque(texto: string, inicio: number): number {
 export function prepararJSONPegado(texto: string): { json: string; mensajes: string[]; registro: string } {
   const limpio = texto.trim();
   let principal = limpio, registro = "";
-  try { JSON.parse(limpio); }
+  try { JSON.parse(quitarComentariosJSON(limpio)); }
   catch {
     if (!/^[{[]/.test(limpio)) throw new Error("Pegá primero el JSON de la solicitud; el registro de error puede ir después.");
-    const fin = finBloque(limpio, 0);
+    const fin = finBloque(quitarComentariosJSON(limpio), 0);
     principal = limpio.slice(0, fin);
-    JSON.parse(principal);
+    JSON.parse(quitarComentariosJSON(principal));
     registro = limpio.slice(fin).trim();
     if (!/^\[\s*\d{4}-\d{2}-\d{2}[^\]]*\]\s+[^\n]*?(?:DEBUG|ERROR|INFO|WARNING|WARN):/.test(registro))
       throw new Error("Hay texto adicional que no se reconoce como registro. Separalo antes de ordenar.");
   }
-  const valor = JSON.parse(principal);
+  const valor = JSON.parse(quitarComentariosJSON(principal));
   const mensajes: string[] = [];
   // Los campos personalizados se conservan: no reconocido no significa inválido.
   const grupos = new Set(["Detalles", "Pagos", "Subtotales", "DocumentosAsociados", "Cuotas", "tipOpe", "tipoDoc", "ruc", "password"]);
