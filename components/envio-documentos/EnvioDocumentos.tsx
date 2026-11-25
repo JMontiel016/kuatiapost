@@ -153,6 +153,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   const [informeJSON, cambiarInformeJSON] = useState<(ReturnType<typeof prepararJSONPegado> & { sobre: string }) | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
+  const [verEditorJSON, cambiarVerEditorJSON] = useState(true);
   const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
   function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
   // Avisos temporales; no se eliminan ni el borrador ni los errores de campo.
@@ -787,7 +788,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     </button>
                   </div>
                   {editorTab === "json" && (
-                    <>
+                    <div id="cuerpo-editor-json" hidden={!verEditorJSON}>
                       <div className="search-bar">
                         <Search size={15} />
                         <input
@@ -827,7 +828,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                           onChange={(e) => setBody(e.target.value)}
                         />
                       </div>
-                    </>
+                    </div>
                   )}
                   {editorTab === "form" && (
                     <div className="fields-scroll">
@@ -877,6 +878,17 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <span>
                       {body.length.toLocaleString("es-PY")} caracteres · UTF-8
                     </span>
+                    {editorTab === "json" && (
+                      <button
+                        type="button"
+                        className="outline editor-toggle"
+                        aria-controls="cuerpo-editor-json"
+                        aria-expanded={verEditorJSON}
+                        onClick={() => cambiarVerEditorJSON(v => !v)}
+                      >
+                        {verEditorJSON ? "Minimizar JSON" : "Desplegar JSON"}
+                      </button>
+                    )}
                   </div>
                   <div className="bottom-tools">
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>

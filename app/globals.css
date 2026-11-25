@@ -528,6 +528,7 @@ main {
 }
 .editor-footer {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px 12px;
   justify-content: space-between;
@@ -537,6 +538,11 @@ main {
   color: #99a5b5;
   background: #fafbfd;
 }
+.editor-footer .editor-toggle {
+  padding: 5px 8px;
+  font-size: inherit;
+}
+
 .syntax-ok,
 .syntax-error {
   display: flex;
