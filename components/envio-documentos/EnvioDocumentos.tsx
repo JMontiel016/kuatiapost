@@ -237,6 +237,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   const editor = useRef<HTMLTextAreaElement>(null),
     file = useRef<HTMLInputElement>(null),
     xmlFile = useRef<HTMLInputElement>(null);
+  const numerosDeLinea = useRef<HTMLDivElement>(null);
   useEffect(() => {
     borradores.current[`${mode}:${type}`] = body;
   }, [body, mode, type]);
@@ -495,11 +496,10 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     }
     setEditorTab("json");
     setTimeout(() => {
-      editor.current?.focus();
+      editor.current?.focus({ preventScroll: true });
       editor.current?.setSelectionRange(i, i + find.length);
-      const lines = body.slice(0, i).split("\n").length;
-      if (editor.current)
-        editor.current.scrollTop = Math.max(0, (lines - 5) * 24);
+      const linea = body.slice(0, i).split("\n").length - 1;
+      numerosDeLinea.current?.children[linea]?.scrollIntoView({ block: "center" });
     }, 0);
   }
 
@@ -644,10 +644,8 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
 
       </aside>
       <main>
-        {guardadoLocal && (
-          <p role="status">
-            {guardado.estado === "error" ? guardado.mensaje : "Los borradores se guardan en este navegador."}
-          </p>
+        {guardadoLocal && guardado.estado === "error" && (
+          <p role="status">{guardado.mensaje}</p>
         )}
         <header className="topbar">
           <div className="breadcrumb">
@@ -815,23 +813,18 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                         </button>
                       </div>
                       <div className="code-editor">
-                        <div className="line-numbers" aria-hidden="true">
+                        <div className="line-numbers" ref={numerosDeLinea} aria-hidden="true">
                           {body.split("\n").map((_, i) => (
                             <div key={i}>{i + 1}</div>
                           ))}
                         </div>
                         <textarea
                           ref={editor}
+                          wrap="off"
                           spellCheck={false}
                           aria-label="Cuerpo JSON editable"
                           value={body}
                           onChange={(e) => setBody(e.target.value)}
-                          onScroll={(e) => {
-                            const gutter =
-                              e.currentTarget.previousElementSibling;
-                            if (gutter)
-                              gutter.scrollTop = e.currentTarget.scrollTop;
-                          }}
                         />
                       </div>
                     </>
