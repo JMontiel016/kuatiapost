@@ -153,7 +153,6 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   const [informeJSON, cambiarInformeJSON] = useState<(ReturnType<typeof prepararJSONPegado> & { sobre: string }) | null>(null);
   const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
   const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
-  const [verEditorJSON, cambiarVerEditorJSON] = useState(true);
   const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
   function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
   // Avisos temporales; no se eliminan ni el borrador ni los errores de campo.
@@ -238,6 +237,9 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   const editor = useRef<HTMLTextAreaElement>(null),
     file = useRef<HTMLInputElement>(null),
     xmlFile = useRef<HTMLInputElement>(null);
+  const [alturaJson, setAlturaJson] = useState<number>();
+  const arrastreJson = useRef<{ y: number; altura: number } | null>(null);
+  const ajustarAlturaJson = (altura: number) => setAlturaJson(Math.min(1600, Math.max(48, altura)));
   const numerosDeLinea = useRef<HTMLDivElement>(null);
   useEffect(() => {
     borradores.current[`${mode}:${type}`] = body;
@@ -500,7 +502,10 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
       editor.current?.focus({ preventScroll: true });
       editor.current?.setSelectionRange(i, i + find.length);
       const linea = body.slice(0, i).split("\n").length - 1;
-      numerosDeLinea.current?.children[linea]?.scrollIntoView({ block: "center" });
+      const caja = editor.current;
+      if (!caja) return;
+      caja.scrollTop = Math.max(0, 19 + linea * 24 - caja.clientHeight / 2);
+      if (numerosDeLinea.current) numerosDeLinea.current.scrollTop = caja.scrollTop;
     }, 0);
   }
 
@@ -788,7 +793,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     </button>
                   </div>
                   {editorTab === "json" && (
-                    <div id="cuerpo-editor-json" hidden={!verEditorJSON}>
+                    <div>
                       <div className="search-bar">
                         <Search size={15} />
                         <input
@@ -823,11 +828,46 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                           ref={editor}
                           wrap="off"
                           spellCheck={false}
+                          id="cuerpo-json-editable"
+                          style={{ height: alturaJson }}
                           aria-label="Cuerpo JSON editable"
                           value={body}
                           onChange={(e) => setBody(e.target.value)}
+                          onScroll={e => {
+                            if (numerosDeLinea.current)
+                              numerosDeLinea.current.scrollTop = e.currentTarget.scrollTop;
+                          }}
                         />
                       </div>
+                      <div
+                        className="json-resize-handle"
+                        role="separator"
+                        tabIndex={0}
+                        aria-label="Altura del editor JSON"
+                        aria-controls="cuerpo-json-editable"
+                        aria-valuemin={48}
+                        aria-valuemax={1600}
+                        aria-valuenow={alturaJson ?? 405}
+                        onPointerDown={e => {
+                          if (e.button !== 0 || !editor.current) return;
+                          arrastreJson.current = { y: e.clientY, altura: editor.current.offsetHeight };
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        }}
+                        onPointerMove={e => {
+                          if (!e.currentTarget.hasPointerCapture(e.pointerId) || !arrastreJson.current) return;
+                          ajustarAlturaJson(arrastreJson.current.altura + e.clientY - arrastreJson.current.y);
+                        }}
+                        onLostPointerCapture={() => { arrastreJson.current = null; }}
+                        onKeyDown={e => {
+                          const altura = editor.current?.offsetHeight ?? 405;
+                          if (e.key === "ArrowUp") ajustarAlturaJson(altura - 24);
+                          else if (e.key === "ArrowDown") ajustarAlturaJson(altura + 24);
+                          else if (e.key === "Home") ajustarAlturaJson(48);
+                          else if (e.key === "End") ajustarAlturaJson(1600);
+                          else return;
+                          e.preventDefault();
+                        }}
+                      />
                     </div>
                   )}
                   {editorTab === "form" && (
@@ -878,17 +918,6 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <span>
                       {body.length.toLocaleString("es-PY")} caracteres · UTF-8
                     </span>
-                    {editorTab === "json" && (
-                      <button
-                        type="button"
-                        className="outline editor-toggle"
-                        aria-controls="cuerpo-editor-json"
-                        aria-expanded={verEditorJSON}
-                        onClick={() => cambiarVerEditorJSON(v => !v)}
-                      >
-                        {verEditorJSON ? "Minimizar JSON" : "Desplegar JSON"}
-                      </button>
-                    )}
                   </div>
                   <div className="bottom-tools">
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
@@ -1100,7 +1129,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
             />
           )}
           {view === "consulta" && (
-            <EventosConsultas token={token} consulta={{
+            <EventosConsultas token={token} url={url} consulta={{
               token, setToken,
               consultaUrl, setConsultaUrl,
               kudeUrl, setKudeUrl,

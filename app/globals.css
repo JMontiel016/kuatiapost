@@ -489,15 +489,17 @@ main {
 
 /* Editor JSON y numeración de líneas */
 .code-editor {
-  min-height: 405px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  position: relative;
+  padding-left: 46px;
   background: #fff;
 }
 .line-numbers {
-  min-width: 46px;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 46px;
+  overflow: hidden;
   text-align: right;
-  padding: 19px 13px 35px 8px;
+  padding: 19px 8px;
   background: #fafbfd;
   color: #b1bccb;
   font-family: "IBM Plex Mono", monospace;
@@ -507,14 +509,14 @@ main {
 }
 .code-editor textarea {
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  display: block;
+  height: 405px;
+  min-height: 48px;
   margin: 0;
   padding: 19px 17px;
   border: 0;
   resize: none;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
   font-size: 12px;
   line-height: 24px;
   font-family: "IBM Plex Mono", monospace;
@@ -522,6 +524,28 @@ main {
   tab-size: 2;
   white-space: pre;
   outline-offset: -2px;
+}
+/* Control de altura para mouse, pantalla táctil y teclado. */
+.json-resize-handle {
+  display: grid;
+  height: 18px;
+  place-items: center;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  color: #718297;
+  border-top: 1px solid #d4deea;
+}
+.json-resize-handle::before {
+  content: "";
+  width: 38px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.json-resize-handle:hover,
+.json-resize-handle:focus-visible {
+  color: #e56c31;
 }
 .code-editor textarea::selection {
   background: #cde5ff;
@@ -538,11 +562,6 @@ main {
   color: #99a5b5;
   background: #fafbfd;
 }
-.editor-footer .editor-toggle {
-  padding: 5px 8px;
-  font-size: inherit;
-}
-
 .syntax-ok,
 .syntax-error {
   display: flex;
@@ -1185,8 +1204,8 @@ td small {
   .main-content {
     padding-top: 42px;
   }
-  .code-editor {
-    min-height: 480px;
+  .code-editor textarea {
+    height: 480px;
   }
   .fields-scroll,
   .auth-body {
