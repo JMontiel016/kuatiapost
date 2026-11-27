@@ -15,6 +15,7 @@ import {
   Copy,
   ChevronRight,
   ShieldCheck,
+  ListChecks,
   RefreshCw,
   FileCode,
   ExternalLink,
@@ -35,15 +36,14 @@ import {
   pointer,
   safeUrl,
   request,
-  revisarTextoJSON,
+  esOperacionFutura,
+  verificarApiEnvio,
 } from "../../lib/integracion/solicitudes-integracion";
 import {
-  validarDocumento as validateDocument,
   camposFaltantes,
-  completarDescripciones,
-  revisarDescripciones,
   vaciarCamposOpcionales,
 } from "../../lib/documentos/campos-documentos";
+import { verificarJson } from "../../lib/integracion/verificar-json";
 import { ordenarJSON, prepararJSONPegado } from "../../lib/integracion/ordenar-json";
 import CamposSolicitud from "../documentos/CamposSolicitud";
 import CamposDocumento, {
@@ -151,7 +151,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
 
   const [tipoAviso, cambiarTipoAviso] = useState("info");
   const [informeJSON, cambiarInformeJSON] = useState<(ReturnType<typeof prepararJSONPegado> & { sobre: string }) | null>(null);
-  const [revisionRealizada, cambiarRevisionRealizada] = useState(false);
+  const [revisionActiva, cambiarRevisionActiva] = useState<"json" | "api" | null>(null);
   const [oscuro, cambiarOscuro] = useState(booleano("oscuro"));
   const [verRespuesta, cambiarVerRespuesta] = useState(booleano("verRespuesta", true));
   function setNotice(texto: string, tipo = "info") { cambiarNotice(texto); cambiarTipoAviso(tipo); }
@@ -161,7 +161,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     const reloj = window.setTimeout(() => cambiarNotice(""), 6500);
     return () => window.clearTimeout(reloj);
   }, [notice]);
-  useEffect(() => { cambiarRevisionRealizada(false); setErrors([]); }, [body]);
+  useEffect(() => { setErrors([]); }, [body]);
   useEffect(() => { document.documentElement.dataset.tema = oscuro ? "oscuro" : "claro"; }, [oscuro]);
   useEffect(() => {
     // Evita restaurar credenciales mediante la caché de navegación al volver.
@@ -377,43 +377,26 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
     });
   }
 
-  /** Revisa campos aplicables antes de confirmar y enviar el documento. */
+  /** Envía el JSON editado para que el servicio aplique su propio contrato. */
   async function sendRequest() {
     await attempt(async () => {
-      const data = parseObject(body);
-      const textoRevisado = revisarTextoJSON(body);
-      const problemas = mode === "emit"
-        ? [...textoRevisado.errores, ...validateDocument(data, type, textoRevisado.numeros)]
-        : textoRevisado.errores;
-      if (problemas.length) {
-        setErrors(problemas);
-        setNotice("Corregí los problemas indicados antes de enviar.", "warning");
-        return;
-      }
-      if (!token.trim())
+      const data = method === "GET" ? null : parseObject(body);
+      const tipoEnvio = documentTypes.find(doc => doc.id === String(data?.iTiDE)) ?? selected;
+      if (esOperacionFutura(url, method) && !token.trim())
         throw Error("Generá o ingresá el token en Configuración.");
-      if (mode === "emit") {
-        setErrors([]);
-        const pendientes = revisarDescripciones(data, type).sugerencias.length;
-        const aviso = pendientes
-          ? "\n\nHay descripciones pendientes de completar o ajustar. Confirmá solo si tu integración las genera a partir de los códigos."
-          : "";
-        if (
-          !window.confirm(
-            `Se enviará ${selected.name.toLowerCase()} a ${url}. ¿Confirmás el envío?${aviso}`,
-          )
-        )
-          return;
-      }
+      if (mode === "emit" &&
+        !window.confirm(`Se enviará ${tipoEnvio.name.toLowerCase()} a ${url}. ¿Confirmás el envío?`))
+        return;
+      setErrors([]);
       setBusy(true);
       try {
-        const result = await request(url, method, data, token, body);
+        const result = await request(url, method, data, token.trim(), body);
         setResponse(result);
         setRecords((old) => [
           {
             id: crypto.randomUUID(),
             date: new Date().toLocaleString("es-PY"),
-            type: selected.name,
+            type: tipoEnvio.name,
             operation: mode === "emit" ? "Emisión" : "Solicitud personalizada",
             request: data,
             response: result,
@@ -544,60 +527,31 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
   }
   function formatearJSON() {
     cambiarInformeJSON(null);
+    cambiarRevisionActiva(null);
+    setErrors([]);
     try {
       setBody(ordenarJSON(body));
-      setErrors([]);
-      cambiarRevisionRealizada(false);
     } catch {
       try {
         const resultado = prepararJSONPegado(body);
         setBody(resultado.json);
         cambiarInformeJSON({ ...resultado, sobre: resultado.json });
       } catch (error) {
-        cambiarRevisionRealizada(true);
         setErrors([`No se pudo ordenar: ${error instanceof Error ? error.message : "revisá la sintaxis del JSON"}`]);
       }
     }
   }
-  function verificarJSON() {
+
+  function abrirRevision(revision: "json" | "api") {
     cambiarInformeJSON(null);
+    cambiarRevisionActiva(revision);
     setErrors([]);
-    cambiarRevisionRealizada(false);
-    try {
-      const resultado = prepararJSONPegado(body, mode === "emit" ? type : undefined);
-      cambiarInformeJSON({ ...resultado, sobre: body });
-    } catch (error) {
-      let mensaje = error instanceof Error ? error.message : "No se pudo verificar el JSON.";
-      try { parseObject(body); }
-      catch (sintaxis) { if (sintaxis instanceof Error) mensaje = sintaxis.message; }
-      cambiarRevisionRealizada(true);
-      setErrors([mensaje]);
-    }
   }
 
-  // La guía se actualiza con los datos del formulario, sin llamar a la IA por cada tecla.
-  const faltantesActuales =
-    parsed && mode === "emit" ? camposFaltantes(parsed, type) : [];
+  const faltantesActuales = parsed && mode === "emit" ? camposFaltantes(parsed, type) : [];
   const informeCompleto = informeJSON?.sobre === body ? informeJSON : null;
-  const tipoRevisionActual = informeCompleto?.tipo || (mode === "emit" ? type : String(parsed?.iTiDE || ""));
-  const descripcionesSugeridas = (revisionRealizada || informeCompleto) && parsed && ["1","4","5","6","7"].includes(tipoRevisionActual)
-    ? revisarDescripciones(parsed, tipoRevisionActual).sugerencias
-    : [];
-  const accionesDescripciones = descripcionesSugeridas.length > 0 && (
-      <div className="errores-desplegables">
-        <p>Podés aplicar estas descripciones o dejar el JSON como está si tu integración las genera a partir de los códigos.</p>
-        <ul>
-          {descripcionesSugeridas.map(({ grupo, indice, campo, codigo, valor, reemplaza }) => {
-            const ruta = grupo ? `${grupo}[${indice}].${campo}` : campo;
-            return <li key={ruta}><code>{ruta}</code> · {reemplaza ? "Reemplazar por " : ""}{valor} (según <code>{codigo}</code>)</li>;
-          })}
-        </ul>
-        <button type="button" onClick={() => {
-          setBody(pretty(completarDescripciones(parsed, tipoRevisionActual)));
-          setNotice("Descripciones completadas en el JSON.", "success");
-        }}>Autocompletar descripciones</button>
-      </div>
-    );
+  const revisionJson = revisionActiva === "json" ? verificarJson(body, mode === "emit" ? type : undefined) : null;
+  const revisionApi = revisionActiva === "api" ? verificarApiEnvio(url, method, body, token) : null;
   // Solo el estado explícito del documento permite mostrar aprobación.
   const approved =
     response?.data?.Estado === "Aprobado" ||
@@ -921,8 +875,11 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                   </div>
                   <div className="bottom-tools">
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
-                    <button type="button" onClick={verificarJSON}>
+                    <button type="button" onClick={() => abrirRevision("json")}>
                       <ShieldCheck size={16} /> Verificar JSON
+                    </button>
+                    <button onClick={() => abrirRevision("api")}>
+                      <ListChecks size={16} /> Verificar API de envío
                     </button>
                     <button
                       onClick={() =>
@@ -967,31 +924,31 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                       Excel
                     </button>
                   </div>
-                  {informeCompleto && <details className={`validation ${informeCompleto.mensajes.length || descripcionesSugeridas.length ? "revision-warning" : "revision-success"}`} open role="status">
-                    <summary>Verificación completa del JSON</summary>
-                    <button onClick={() => cambiarInformeJSON(null)}>Cerrar revisión</button>
+                  {informeCompleto?.registro && <details className="validation" role="status">
+                    <summary>Registro separado del JSON</summary>
+                    <pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{informeCompleto.registro}</pre>
+                  </details>}
+                  {errors.length > 0 && <div className="validation revision-warning" role="status">
+                    {errors.map(error => <p key={error}>{error}</p>)}
+                  </div>}
+                  {revisionJson && <div className={`validation ${revisionJson.errores.length ? "revision-warning" : "revision-success"}`} role="status">
+                    <strong>{revisionJson.tipo?.name ?? "JSON"} · {revisionJson.errores.length
+                      ? `${revisionJson.errores.length} ${revisionJson.errores.length === 1 ? "error" : "errores"}`
+                      : "Sin errores detectados"}</strong>
                     <div className="errores-desplegables">
-                      <p>
-                        {informeCompleto.aplicanReglas
-                          ? `${documentTypes.find(d => d.id === informeCompleto.tipo)?.name || "Documento electrónico"} (iTiDE=${informeCompleto.tipo})`
-                          : "Sintaxis y formatos conocidos"}
-                        {" · "}{informeCompleto.resumen.campos} campos recorridos · {informeCompleto.resumen.filas} filas
-                        {" · "}{informeCompleto.resumen.fueraDeCatalogo} campos fuera del catálogo
-                      </p>
-                      <p>{informeCompleto.errores.length} errores · {informeCompleto.avisos.length} avisos · {descripcionesSugeridas.length} descripciones sugeridas</p>
-                      {informeCompleto.errores.length > 0 && <><strong>Errores para corregir</strong>
-                        {informeCompleto.errores.map(mensaje => <p key={mensaje}>{mensaje}</p>)}</>}
-                      {informeCompleto.avisos.length > 0 && <><strong>Avisos de la integración</strong>
-                        {informeCompleto.avisos.map(mensaje => <p key={mensaje}>{mensaje}</p>)}</>}
+                      {revisionJson.errores.map(error => <p key={error}>{error}</p>)}
+                      {revisionJson.sugerencias.map(mensaje => <p key={mensaje}>Sugerencia · {mensaje}</p>)}
                     </div>
-                    {informeCompleto.registro && <details><summary>Ver registro separado</summary><pre style={{whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{informeCompleto.registro}</pre></details>}
-                    {accionesDescripciones}
-                  </details>}
-                  {(revisionRealizada || errors.length > 0) && <details className={`validation ${errors.length ? "revision-warning" : "revision-success"}`} open role="status">
-                    <summary>{errors.length ? `Revisión: ${errors.length} puntos por ajustar` : "Revisión completada sin errores detectados"}</summary>
-                    <div className="errores-desplegables">{errors.length ? errors.map((error,i)=><p key={i}>{error}</p>) : <p>{mode === "custom" && !["1","4","5","6","7"].includes(String(parsed?.iTiDE || "")) ? "Sintaxis y grupos comprobados. Para revisar campos obligatorios de una emisión, informá un iTiDE reconocido. Otros contratos dependen de tu integración." : "Se comprobaron los campos obligatorios y las reglas disponibles para este tipo. La aceptación final depende de tu integración."}</p>}</div>
-                    {!informeCompleto && accionesDescripciones}
-                  </details>}
+                  </div>}
+                  {revisionApi && <div className={`validation ${revisionApi.errores.length ? "revision-warning" : "revision-success"}`} role="status">
+                    <strong>API de envío · {revisionApi.errores.length ? "Revisá la solicitud" : "Comprobación local correcta"}</strong>
+                    <div className="errores-desplegables">
+                      {revisionApi.errores.map(error => <p key={error}>{error}</p>)}
+                      {!revisionApi.errores.length && <p>{revisionApi.contratoConocido
+                        ? "URL, solicitud y requisitos conocidos de Futura100 comprobados."
+                        : "Configuración básica comprobada para esta URL."} La comprobación se hizo sin enviar.</p>}
+                    </div>
+                  </div>}
                 </section>
                 <aside className="right-column">
                   <section className="panel import-panel">

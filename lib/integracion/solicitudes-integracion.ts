@@ -95,6 +95,49 @@ export function safeUrl(raw: string) {
   return u.toString();
 }
 
+/** Selecciona las reglas conocidas por destino y método. */
+export function esOperacionFutura(url: string, metodo: string) {
+  try {
+    const destino = new URL(safeUrl(url));
+    return metodo === "POST" &&
+      destino.origin === "https://test-integracion-mdware.dev.platform.futura100.com.py" &&
+      /^\/api\/operation\/?$/.test(destino.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** Comprueba la solicitud de forma local y aplica los requisitos conocidos del destino. */
+export function verificarApiEnvio(url: string, metodo: string, cuerpo: string, token: string) {
+  const errores: string[] = [];
+  try {
+    safeUrl(url);
+  } catch (error) {
+    errores.push(error instanceof Error ? error.message : "Revisá la URL de envío.");
+  }
+
+  if (!["GET", "POST"].includes(metodo)) errores.push("Seleccioná GET o POST.");
+  let documento: Record<string, unknown> | undefined;
+  if (metodo === "POST") {
+    try {
+      documento = parseObject(cuerpo);
+      errores.push(...revisarTextoJSON(cuerpo).errores);
+    } catch {
+      errores.push("Cuerpo: ingresá un objeto JSON válido para POST.");
+    }
+  }
+
+  const futura = esOperacionFutura(url, metodo);
+  if (futura) {
+    if (!token.trim()) errores.push("Token de acceso: generá o ingresá el token para Futura100.");
+    const operacion = documento?.tipOpe;
+    if (documento && (operacion == null || (typeof operacion === "string" && !operacion.trim())))
+      errores.push("tipOpe: falta el tipo de operación. Para emitir, usá 1.");
+  }
+
+  return { errores, contratoConocido: futura };
+}
+
 /** Envía GET o POST y devuelve HTTP, respuesta y tiempo; no interpreta aprobación fiscal. */
 export async function request(
   url: string,

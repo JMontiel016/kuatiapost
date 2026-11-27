@@ -752,6 +752,9 @@ export function informacionCampo(
         "Se informa el total de IVA o su base imponible en datos con IVA.",
         "Manual v150, F017 y F020",
       );
+    if (!["dTotOpe", "dTotDesc", "dTotDescGlotem", "dTotAntItem", "dTotAnt",
+      "dPorcDescTotal", "dDescTotal", "dAnticipo", "dRedon", "dTotGralOpe"].includes(codigo))
+      return opcional("Dato adicional de los totales, si corresponde.");
     return condicion(
       tipo !== "7",
       true,
@@ -819,6 +822,8 @@ export function informacionCampo(
         "Se requiere en pagos al contado con moneda extranjera.",
         "Manual v150, E611",
       );
+    if (!["iTiPago", "dMonTiPag", "cMoneTiPag"].includes(codigo))
+      return opcional("Dato adicional del pago, si corresponde.");
     return condicion(
       pagoRequerido,
       !estaVacio(documento.iCondOpe),
@@ -947,7 +952,7 @@ export function camposFaltantes(documento: any, tipo: string) {
   }[] = [];
   // Combina la estructura mínima y los datos para detectar incluso claves eliminadas.
   const estructura = crearPlantilla(tipo) as any;
-  const usaFormaPago = !("Pagos" in documento) && Array.isArray(documento.FormaPago) && "Pagos" in estructura;
+  const usaFormaPago = estaVacio(documento.Pagos) && Array.isArray(documento.FormaPago) && "Pagos" in estructura;
   if (usaFormaPago) {
     const { FormaPago, ...resto } = documento;
     documento = { ...resto, Pagos: FormaPago };
@@ -962,6 +967,7 @@ export function camposFaltantes(documento: any, tipo: string) {
   const { deducibles } = revisarDescripciones(documento, tipo);
   recorrerCampos(revision, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
+    if (grupo === "Detalles" && codigo === "dBaseExe" && !estaVacio(fila.dBasExe)) return;
     if (info.estado === "obligatorio" && estaVacio(valor) && !deducibles.has(ruta))
       faltantes.push({
         ruta: usaFormaPago ? ruta.replace(/^Pagos\./, "FormaPago.") : ruta,
@@ -1118,6 +1124,7 @@ export function validarEstructuraDocumento(documento: Record<string, unknown>) {
   return gruposDocumento.flatMap(grupo => {
     if (!(grupo in documento)) return [];
     const filas = documento[grupo];
+    if (estaVacio(filas)) return [];
     if (!Array.isArray(filas)) return [`(${grupo}) Debe ser una lista entre corchetes [ ].`];
     return filas.flatMap((fila, indice) => esFilaDocumento(fila)
       ? [] : [`(${grupo}[${indice}]) El ítem debe ser un objeto entre llaves { }.`]);
@@ -1129,7 +1136,8 @@ function erroresTotalBruto(documento: any, tipo: string, numeros?: ReadonlyMap<s
   if (["4", "7"].includes(tipo) || !["1", "3", "4", "5"].includes(String(documento.iTImp))) return [];
   const errores: string[] = [];
   const campos = ["dSubExe", "dSubExo", "dSub5", "dSub10", "dTotOpe"];
-  for (const [indice, fila] of (documento.Subtotales || []).entries()) {
+  const filas = Array.isArray(documento.Subtotales) ? documento.Subtotales : [];
+  for (const [indice, fila] of filas.entries()) {
     if (!fila) continue;
     const importes = campos.map(campo => {
       const dato = numeros?.get(JSON.stringify(["Subtotales", indice, campo])) ?? String(fila[campo] ?? "");
@@ -1150,12 +1158,18 @@ function erroresTotalBruto(documento: any, tipo: string, numeros?: ReadonlyMap<s
 }
 
 /** Revisión orientativa de la plantilla: obligatorios activos, formatos e importes. */
-export function validarDocumento(documento: any, tipo: string, numeros?: ReadonlyMap<string, string>) {
+export function validarDocumento(
+  documento: any,
+  tipo: string,
+  numeros?: ReadonlyMap<string, string>,
+  revisarOperacion = true,
+) {
   const estructura = validarEstructuraDocumento(documento);
   if (estructura.length) {
     documento = { ...documento };
     for (const grupo of gruposDocumento) {
       if (!(grupo in documento)) continue;
+      if (estaVacio(documento[grupo])) continue;
       const filas = documento[grupo];
       documento[grupo] = Array.isArray(filas)
         ? filas.map(fila => esFilaDocumento(fila) ? fila : undefined)
@@ -1163,12 +1177,12 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
     }
   }
   const relaciones = revisarDescripciones(documento, tipo);
-  const usaFormaPago = ["1", "4"].includes(tipo) && !("Pagos" in documento) && Array.isArray(documento.FormaPago);
+  const usaFormaPago = ["1", "4"].includes(tipo) && estaVacio(documento.Pagos) && Array.isArray(documento.FormaPago);
   if (usaFormaPago) {
     const { FormaPago, ...resto } = documento;
     documento = { ...resto, Pagos: FormaPago };
   }
-  const errores = [...estructura, ...camposFaltantes(documento, tipo).map(
+  const errores = [...estructura, ...camposFaltantes(documento, tipo).filter(f => revisarOperacion || f.ruta !== "tipOpe").map(
     (f) => `(${f.codigo}) ${f.nombre} [${usaFormaPago ? f.ruta.replace(/^Pagos\./, "FormaPago.") : f.ruta}]: falta completar. ${f.motivo}`,
   )];
   if (String(documento.iTiOpe) === "4" && (String(documento.iNatRec) !== "2" || documento.cPaisRec === "PRY")) errores.push("Servicios al exterior: elegí No contribuyente y un país diferente de PRY.");
@@ -1177,10 +1191,14 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
   if (tipo === "4" && !estaVacio(documento.iCondOpe) && String(documento.iCondOpe) !== "1")
     errores.push("(iCondOpe) En una autofactura informá Contado (1).");
   // NT 023: identificación innominada únicamente para B2C, nunca en NC/ND/NR.
-  if (String(documento.iTipIDRec) === "5") {
+  if (String(documento.iNatRec) === "2" && String(documento.iTipIDRec) === "5") {
     if (["5", "6", "7"].includes(tipo)) errores.push("(iTipIDRec) Innominado no está permitido en nota de crédito, nota de débito o nota de remisión.");
     if (String(documento.iTiOpe) !== "2") errores.push("(iTipIDRec) Innominado únicamente corresponde a B2C.");
-    if (String(documento.dNumIDRec) !== "0") errores.push("(dNumIDRec) Para Innominado informá 0.");
+    if (!estaVacio(documento.dNumIDRec) && String(documento.dNumIDRec) !== "0") {
+      const valor = documento.dNumIDRec;
+      const esperado = typeof valor === "number" ? "0" : '"0"';
+      errores.push(`(dNumIDRec) Para un receptor innominado, cambiá ${JSON.stringify(valor)} por ${esperado}.`);
+    }
   }
   if (String(documento.iNatRec) === "2") for (const k of ["iTiContRec","dRucRec","dDVRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a un receptor no contribuyente. Retirá este dato.`);
   if (String(documento.iNatRec) === "1") for (const k of ["iTipIDRec","dDTipIDRec","dNumIDRec"]) if (!estaVacio(documento[k])) errores.push(`(${k}) No corresponde a esta selección del receptor. Retirá este dato.`);
@@ -1190,7 +1208,7 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
     if (String(documento.iCondOpe) === "2" && Number(documento.dMonEnt) > 0)
       errores.push("(Pagos) Informá la forma de pago de la entrega inicial.");
   }
-  for (const pago of documento.Pagos || []) {
+  for (const pago of Array.isArray(documento.Pagos) ? documento.Pagos : []) {
     if (!pago) continue;
     if (String(pago.iTiPago) !== "2" && (pago.dNumCheq || pago.dBcoEmi)) errores.push("Datos de cheque: solo corresponden cuando la forma de pago es Cheque (2).");
     if (!["3","4"].includes(String(pago.iTiPago)) && (pago.iDenTarj || pago.iForProPa || pago.dNumTarj)) errores.push("Datos de tarjeta: solo corresponden a crédito (3) o débito (4).");
@@ -1221,12 +1239,15 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
   // Aplica también a JSON pegados o importados, no solo al formulario.
   recorrerCampos(documento, (codigo, valor, ruta, fila, grupo) => {
     const info = informacionCampo(codigo, documento, tipo, fila, grupo);
+    if (!grupo && codigo === "tipOpe" && !revisarOperacion) return;
+    if (!grupo && ["iMotEmi", "dDesMotEmi"].includes(codigo) && !["5", "6"].includes(tipo)) return;
+    if (estaVacio(valor)) return;
     const grupoOriginal = usaFormaPago && grupo === "Pagos" ? "FormaPago" : grupo;
     const indice = grupo ? Number(ruta.split(".")[1]) : -1;
     const clave = JSON.stringify(grupo ? [grupoOriginal, indice, codigo] : [codigo]);
     const original = typeof valor === "number" ? numeros?.get(clave) : undefined;
     const dato = original && !/[eE]/.test(original) ? original : valor;
-    const error = errorFormato(codigo, dato);
+    const error = errorFormato(grupo === "Detalles" && codigo === "dBasExe" ? "dBaseExe" : codigo, dato);
     const rutaVisible = grupo ? `${grupoOriginal}[${indice}].${codigo}` : ruta;
     if (error && !rutasDeducibles.has(ruta)) errores.push(`(${codigo}) ${info.nombre} [${rutaVisible}]: ${error}`);
     if (
@@ -1257,7 +1278,7 @@ export function validarDocumento(documento: any, tipo: string, numeros?: Readonl
         "(dTasaIVA) Tasa del IVA: elegí 5 o 10 para un producto gravado.",
       );
   });
-  if (documento.tipOpe !== "1" && documento.tipOpe !== 1)
+  if (revisarOperacion && documento.tipOpe !== "1" && documento.tipOpe !== 1)
     errores.push("(tipOpe) Operación: el envío de datos utiliza 1.");
   if (Array.isArray(documento.Detalles) && documento.Detalles.length > 999)
     errores.push("Productos: el registro admite hasta 999 ítems.");
