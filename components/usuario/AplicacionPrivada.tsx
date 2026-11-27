@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import LogoKuatiaPost from "../marca/LogoKuatiaPost";
 import EnvioDocumentos from "../envio-documentos/EnvioDocumentos";
 import { leerEspacio } from "../../lib/usuario/almacenamiento-local";
 
@@ -51,17 +52,25 @@ export default function AplicacionPrivada() {
 
   if (espacio) return <EnvioDocumentos {...espacio} />;
   return (
-    <main role="status" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 20 }}>
-      <div style={{ textAlign: "center", maxWidth: 440 }}>
+    <main className="startup-screen">
+      <div className="startup-content">
+        <div className="startup-brand">
+          <span className="startup-logo"><LogoKuatiaPost /></span>
+          <h1>KuatiaPost</h1>
+        </div>
         {error ? (
-          <>
+          <div className="startup-error">
             <p role="alert">{error}</p>
-            <p>Tu trabajo anterior no se borró. Volvé a intentar cuando esté disponible el servidor.</p>
             <button type="button" className="outline" onClick={() => { setError(""); setIntento(v => v + 1); }}>
               Reintentar
             </button>
-          </>
-        ) : "Cargando KuatiaPost…"}
+          </div>
+        ) : (
+          <div className="startup-status" role="status">
+            <p>Abriendo tu espacio de trabajo…</p>
+            <div className="startup-progress" aria-hidden="true" />
+          </div>
+        )}
       </div>
     </main>
   );

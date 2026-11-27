@@ -74,7 +74,7 @@ import { useAutoguardadoCuenta } from "../usuario/useAutoguardadoCuenta";
 type View = "workspace" | "consulta" | "settings" | "manual";
 /** Las pantallas describen tareas concretas; no hay login porque el acceso es público. */
 const navigation = [
-  { id: "workspace", label: "Envío de datos", icon: Braces },
+  { id: "workspace", label: "Envío de documentos", icon: Braces },
   { id: "consulta", label: "Eventos / Consultas", icon: Files },
 ];
 
@@ -634,105 +634,99 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
         )}
         <div className="main-content">
           {view === "workspace" && (
-            <>
+            <div className="send-workspace">
               <div className="page-heading">
                 <div>
-                  <div className="eyebrow">PREPARAR · ENVIAR · CONSULTAR</div>
-                  <h1>Envío de datos</h1>
+                  <h1>Envío de documentos</h1>
                   <p>
-                    Conectá tu integración y trabajá con datos
-                    electrónicos.
+                    Prepará el documento, revisalo y envialo a tu integración.
                   </p>
                 </div>
                 <button className="outline" onClick={() => setView("settings")}>
                   <KeyRound size={16} />
-                  {token ? "Token configurado" : "Configurar conexión"}
+                  Configurar conexión
                 </button>
               </div>
-              <div className="document-switch">
+              <div className="document-switch" role="group" aria-label="Tipo de documento">
                 {documentTypes.map((d) => (
                   <button
                     key={d.id}
                     onClick={() => chooseType(d.id)}
-                    className={type === d.id ? "selected" : ""}
+                    className={mode === "emit" && type === d.id ? "selected" : ""}
+                    aria-pressed={mode === "emit" && type === d.id}
                   >
-                    <span className="doc-code">{d.short}</span>
                     {d.name}
                   </button>
                 ))}
               </div>
               <div className="work-grid">
                 <section className="request-panel panel">
-                  <div className="panel-top">
+                  <header className="panel-top request-heading">
                     <div>
-                      <span className="square-icon">
-                        <FileJson size={19} />
-                      </span>
-                      <strong>
-                        {mode === "emit"
-                          ? selected.name
-                          : "Solicitud personalizada"}
-                      </strong>
+                      <span className="square-icon" aria-hidden="true"><FileJson size={20} /></span>
+                      <h2>{mode === "emit" ? selected.name : "Solicitud personalizada"}</h2>
                     </div>
-                    <span className="tag light">Plantilla base · editable</span>
-                  </div>
-                  <div className="operation-row">
-                    <label>
+                    <label className="request-mode">
                       Operación
-                      <select
-                        value={mode}
-                        onChange={(e) => chooseMode(e.target.value)}
-                      >
-                        <option value="emit">Emitir registro</option>
+                      <select value={mode} onChange={(e) => chooseMode(e.target.value)}>
+                        <option value="emit">Emitir documento</option>
                         <option value="custom">Solicitud personalizada</option>
                       </select>
                     </label>
-                    <span className="tiny">
-                      {mode === "emit"
-                        ? `Código de operación: ${type}`
-                        : "Completá el JSON que recibe tu servicio."}
-                    </span>
-                  </div>
-                  <div className="endpoint">
-                    <select
-                      aria-label="Método HTTP"
-                      value={method}
-                      onChange={(e) => setMethod(e.target.value)}
-                    >
-                      <option>POST</option>
-                      <option disabled={mode === "emit"}>GET</option>
-                    </select>
-                    <input
-                      aria-label="URL de integración"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="https://tu-integracion.com/api/operation"
-                    />
+                  </header>
+                  <div className="endpoint request-line">
+                    <div className="request-field">
+                      <span id="send-method-label">Método HTTP</span>
+                      {mode === "emit" ? (
+                        <span className="request-method">POST</span>
+                      ) : (
+                        <select aria-labelledby="send-method-label" value={method} onChange={(e) => setMethod(e.target.value)}>
+                          <option>POST</option>
+                          <option>GET</option>
+                        </select>
+                      )}
+                    </div>
+                    <label className="request-field request-destination">
+                      URL de envío
+                      <input
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        type="url"
+                        inputMode="url"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        placeholder="https://tu-integracion.com/api/operation"
+                      />
+                    </label>
                     <button
-                      className="primary"
-                      disabled={busy || !url}
+                      className="primary request-send"
+                      disabled={busy || !url.trim()}
                       onClick={sendRequest}
                     >
                       <Send size={16} />
                       {busy ? "Enviando…" : "Enviar"}
                     </button>
+                    {!url.trim() && <p className="request-hint">Ingresá la URL para habilitar el envío.</p>}
                   </div>
                   <div className="editor-toolbar">
-                    <div className="tabs">
+                    <div className="tabs" role="group" aria-label="Vista del editor">
                       <button
                         className={editorTab === "json" ? "on" : ""}
+                        aria-pressed={editorTab === "json"}
                         onClick={() => setEditorTab("json")}
                       >
-                        Editar JSON <span>JSON</span>
+                        Editar JSON
                       </button>
                       <button
                         className={editorTab === "form" ? "on" : ""}
+                        aria-pressed={editorTab === "form"}
                         onClick={() => setEditorTab("form")}
                       >
                         Completar campos
                       </button>
                       <button
                         className={editorTab === "auth" ? "on" : ""}
+                        aria-pressed={editorTab === "auth"}
                         onClick={() => setEditorTab("auth")}
                       >
                         Token de acceso{token && <Check size={13} />}
@@ -769,7 +763,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                             if (find) setBody(body.split(find).join(replace));
                           }}
                         >
-                          En todos
+                          Reemplazar todo
                         </button>
                       </div>
                       <div className="code-editor">
@@ -875,10 +869,10 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                   </div>
                   <div className="bottom-tools">
                     <button onClick={formatearJSON}><Braces size={16}/>Ordenar JSON</button>
-                    <button type="button" onClick={() => abrirRevision("json")}>
+                    <button type="button" aria-pressed={revisionActiva === "json"} onClick={() => abrirRevision("json")}>
                       <ShieldCheck size={16} /> Verificar JSON
                     </button>
-                    <button onClick={() => abrirRevision("api")}>
+                    <button aria-pressed={revisionActiva === "api"} onClick={() => abrirRevision("api")}>
                       <ListChecks size={16} /> Verificar API de envío
                     </button>
                     <button
@@ -952,12 +946,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                 </section>
                 <aside className="right-column">
                   <section className="panel import-panel">
-                    <div className="section-label">PREPARÁ TUS DATOS</div>
-                    <h3>Cargar datos del registro</h3>
-                    <p>
-                      Completá los campos o importá tus datos. El JSON queda
-                      siempre editable.
-                    </p>
+                    <h3>Importar y convertir</h3>
                     <button
                       className="import-option"
                       onClick={() => file.current?.click()}
@@ -990,14 +979,14 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                         <FileCode size={18} />
                       </span>
                       <span>
-                        <strong>Crear NC desde XML</strong>
+                        <strong>Nota de crédito desde XML</strong>
                         <small>Factura completa o selección de ítems</small>
                       </span>
                       <ChevronRight size={16} />
                     </button>
                     <button className="import-option nr-import-entry" onClick={() => setNrMasivaOpen(true)}>
                       <span className="import-icon"><FileCode size={18} /></span>
-                      <span><strong>Crear NR masiva desde XML/TXT</strong><small>Carpeta o varios archivos · una sola NR</small></span>
+                      <span><strong>Nota de remisión masiva</strong><small>Combiná archivos XML o TXT</small></span>
                       <ChevronRight size={16} />
                     </button>
                     <button
@@ -1005,7 +994,7 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                       onClick={() => {
                         if (
                           window.confirm(
-                            "¿Vaciar los campos del registro actual?",
+                            "¿Restablecer la plantilla? Se perderán los cambios del documento actual.",
                           )
                         ) {
                           setBody(pretty(template(type)));
@@ -1026,42 +1015,42 @@ export default function EnvioDocumentos({ inicial, guardadoLocal = false }: {
                     <span className="square-icon">
                       <PanelLeft size={18} />
                     </span>
-                    <strong>Respuesta del servicio</strong><button className="outline" aria-expanded={verRespuesta} onClick={() => cambiarVerRespuesta(!verRespuesta)}>{verRespuesta ? "Minimizar" : "Desplegar"}</button>
+                    <h2>Respuesta del servicio</h2>
                   </div>
+                  <div className="response-actions">
+                    {response && (
+                      <div className="response-meta">
+                        <span
+                          className={
+                            response.http < 300
+                              ? "badge success"
+                              : "badge warning"
+                          }
+                        >
+                          HTTP {response.http}
+                        </span>
+                        <span>{response.elapsed} ms</span>
+                        {approved && (
+                          <span className="badge success">Aprobado</span>
+                        )}
+                      </div>
+                    )}
+                    <button className="outline" aria-expanded={verRespuesta} aria-controls="send-response-body" onClick={() => cambiarVerRespuesta(!verRespuesta)}>{verRespuesta ? "Ocultar" : "Mostrar"}</button>
+                  </div>
+                </div>
+                <div id="send-response-body" hidden={!verRespuesta}>
                   {response ? (
-                    <div className="response-meta">
-                      <span
-                        className={
-                          response.http < 300
-                            ? "badge success"
-                            : "badge warning"
-                        }
-                      >
-                        HTTP {response.http}
-                      </span>
-                      <span>{response.elapsed} ms</span>
-                      {approved && (
-                        <span className="badge success">Aprobado</span>
-                      )}
-                    </div>
+                    <pre className="response-code">{pretty(response.data)}</pre>
                   ) : (
-                    <span className="tiny">Sin solicitudes enviadas</span>
+                    <div className="empty-response">
+                      <Send size={24} />
+                      <strong>Todavía no hay una respuesta</strong>
+                      <p>Enviá una solicitud para ver el resultado acá.</p>
+                    </div>
                   )}
                 </div>
-                {verRespuesta && (response ? (
-                  <pre className="response-code">{pretty(response.data)}</pre>
-                ) : (
-                  <div className="empty-response">
-                    <Send size={24} />
-                    <strong>Resultado del envío</strong>
-                    <p>
-                      La respuesta del servicio aparecerá aquí después de
-                      enviar.
-                    </p>
-                  </div>
-                ))}
               </section>
-            </>
+            </div>
           )}
           {view === "manual" && <ManualUso />}
           {view === "settings" && (
